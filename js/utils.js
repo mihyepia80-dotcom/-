@@ -67,52 +67,6 @@ function defaultTasks(isOther = false) {
   return isOther ? [{ id: newId(), content: '' }] : [defaultTask()];
 }
 
-function renderMasterTable(containerId, filterGrade = null) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  let rows = MasterSheet.getRows();
-  if (filterGrade) {
-    rows = rows.filter((r) => String(r.grade).includes(`${filterGrade}학년`) || !r.grade);
-  }
-
-  if (!rows.length) {
-    el.innerHTML = '<p class="master-empty">마스터 시트에 등록된 행사가 없습니다.</p>';
-    return;
-  }
-
-  const renderGroup = (title, semester) => {
-    const group = rows.filter((r) => r.semester === semester);
-    if (!group.length) return '';
-    return `
-      <h4 class="master-group-title">${title}</h4>
-      <table class="eval-table master-table">
-        <thead>
-          <tr>
-            <th class="col-month">월</th>
-            <th class="col-grade">대상학년<br><small>(참여시간)</small></th>
-            <th class="col-activity">주요 교육활동(행사)</th>
-            <th class="col-dept">부서(담당)</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${group
-            .map(
-              (r) => `
-            <tr>
-              <td>${esc(r.month)}</td>
-              <td>${esc(r.grade).replace(/\n/g, '<br>')}</td>
-              <td>${esc(r.activity).replace(/\n/g, '<br>')}</td>
-              <td>${esc(r.dept).replace(/\n/g, '<br>')}</td>
-            </tr>`
-            )
-            .join('')}
-        </tbody>
-      </table>`;
-  };
-
-  el.innerHTML = renderGroup('1학기 (3~7월)', '1학기') + renderGroup('2학기 (8~1월)', '2학기');
-}
-
 function triggerFileInput(accept, onFile) {
   const input = document.createElement('input');
   input.type = 'file';

@@ -1,0 +1,20 @@
+# 환경 변수 (Firebase 키 등 — Git에 올리지 않음)
+.env
+.env.local
+.env.*.local
+
+# 빌드 시 생성되는 런타임 설정
+js/env.js
+
+# Node / Vercel
+node_modules/
+.vercel/
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Firebase Admin 서비스 계정 (서버 전용)
+firebase-service-account.json
+*-firebase-adminsdk-*.json

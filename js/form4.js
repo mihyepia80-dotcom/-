@@ -47,7 +47,7 @@ const Form4 = (() => {
       <div class="split-layout form4-split">
         <div class="split-side">
           <h3 class="section-title side-title">월별 행사 확인</h3>
-          <p class="side-desc">마스터 시트 연동 · 4개 항목만 표시</p>
+          <p class="side-desc">전체 행사 · 월/학년/키워드 검색</p>
           <div class="master-view-wrap table-wrap">
             <div id="f4-master-view" class="master-view"></div>
           </div>
@@ -83,6 +83,7 @@ const Form4 = (() => {
           <div class="form-actions">
             <button type="button" class="btn btn-outline" onclick="Form4.exportExcel()">Excel</button>
             <button type="button" class="btn btn-outline" onclick="window.print()">인쇄</button>
+            ${typeof CloudSync !== 'undefined' ? CloudSync.buttonHtml('클라우드 제출', 'CloudSync.submitForm4()') : ''}
             ${tabs.length > 1 ? `<button type="button" class="btn btn-danger no-print" onclick="Form4.removeTab('${tab.id}')">탭 삭제</button>` : ''}
           </div>
         </div>
@@ -455,7 +456,7 @@ const Form4 = (() => {
   }
 
   function refreshMasterView() {
-    renderMasterTable('f4-master-view');
+    MasterView.mount('f4-master-view');
   }
 
   function exportExcel() {
@@ -503,5 +504,6 @@ const Form4 = (() => {
     resetMainTable,
     resetAttachTable,
     exportExcel,
+    getActiveTab,
   };
 })();

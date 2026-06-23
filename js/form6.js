@@ -53,6 +53,7 @@ const Form6 = (() => {
           <button type="button" class="btn btn-outline" onclick="Form6.clearViewer()">전체 보기</button>
           <button type="button" class="btn btn-outline" onclick="Form6.exportExcel()">Excel 다운</button>
           <button type="button" class="btn btn-outline" onclick="window.print()">인쇄</button>
+          ${typeof CloudSync !== 'undefined' ? CloudSync.buttonHtml('클라우드 제출', 'CloudSync.submitForm6()') : ''}
         </div>
       </div>
       <div id="f6-departments" class="dept-list"></div>
@@ -469,5 +470,8 @@ const Form6 = (() => {
     addPerson,
     exportExcel,
     clearViewer,
+    persistStore,
+    getStore: () => store,
+    getActiveDeptId: () => activeDeptId,
   };
 })();

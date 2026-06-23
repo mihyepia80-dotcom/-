@@ -1,0 +1,14 @@
+{
+  "name": "midterm-eval-app",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/generate-env.js",
+    "dev": "node scripts/generate-env.js && npx --yes serve . -p 8080",
+    "check-env": "node scripts/check-env.js",
+    "admin-key": "node scripts/generate-admin-key.js",
+    "firebase:deploy": "firebase deploy --only firestore"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.7"
+  }
+}

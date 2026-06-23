@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /midterm2026_submissions/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null
+        && resource.data.submittedBy == request.auth.uid;
+    }
+
+    match /midterm2026_master/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /midterm2026_config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}

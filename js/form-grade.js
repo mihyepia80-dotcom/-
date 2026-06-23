@@ -10,7 +10,10 @@ const FormGrade = (() => {
     return `midterm-grade${gradeId}`;
   }
 
-  function defaultMainRows() {
+  function defaultMainRows(prefix) {
+    if (typeof TemplateStore !== 'undefined') {
+      return TemplateStore.getDefaultMainRows(prefix || 'fg1');
+    }
     return MONTHS.map((month) => ({
       month,
       grade: '',
@@ -21,8 +24,9 @@ const FormGrade = (() => {
     }));
   }
 
-  function defaultAttachRows(count = 5) {
-    return Array.from({ length: count }, () => ({ content: '', goodPoints: '', improvePoints: '' }));
+  function defaultAttachRows(count, prefix) {
+    const n = count ?? (typeof TemplateStore !== 'undefined' ? TemplateStore.getDefaultAttachCount(prefix || 'fg1') : 5);
+    return Array.from({ length: n }, () => ({ content: '', goodPoints: '', improvePoints: '' }));
   }
 
   function migrateMainRow(row) {
@@ -50,6 +54,7 @@ const FormGrade = (() => {
           <div class="form-actions">
             <button type="button" class="btn btn-outline" onclick="FormGrade.exportExcel('${g.prefix}')">Excel</button>
             <button type="button" class="btn btn-outline" onclick="window.print()">인쇄</button>
+            ${typeof CloudSync !== 'undefined' ? CloudSync.buttonHtml('클라우드 제출', `CloudSync.submitFormGrade('${g.prefix}')`) : ''}
           </div>
         </div>
         <div class="meta-fields no-print">
@@ -59,7 +64,7 @@ const FormGrade = (() => {
         <div class="split-layout">
           <div class="split-side">
             <h3 class="section-title side-title">월별 행사 확인</h3>
-            <p class="side-desc">마스터 시트 연동 · 4개 항목만 표시</p>
+            <p class="side-desc">전체 행사 · 월/학년/키워드 검색</p>
             <div class="master-view-wrap table-wrap">
               <div id="${g.prefix}-master-view" class="master-view"></div>
             </div>
@@ -209,17 +214,17 @@ const FormGrade = (() => {
   function readStored(prefix) {
     const cfg = getGradeConfig(prefix);
     const raw = localStorage.getItem(storageKey(cfg.id));
-    if (!raw) return { date: '', attendees: '', mainRows: defaultMainRows(), attachRows: defaultAttachRows() };
+    if (!raw) return { date: '', attendees: '', mainRows: defaultMainRows(prefix), attachRows: defaultAttachRows(undefined, prefix) };
     try {
       const data = JSON.parse(raw);
       return {
         date: data.date || '',
         attendees: data.attendees || '',
-        mainRows: data.mainRows?.length ? data.mainRows.map(migrateMainRow) : defaultMainRows(),
-        attachRows: data.attachRows?.length ? data.attachRows.map(migrateAttachRow) : defaultAttachRows(),
+        mainRows: data.mainRows?.length ? data.mainRows.map(migrateMainRow) : defaultMainRows(prefix),
+        attachRows: data.attachRows?.length ? data.attachRows.map(migrateAttachRow) : defaultAttachRows(undefined, prefix),
       };
     } catch {
-      return { date: '', attendees: '', mainRows: defaultMainRows(), attachRows: defaultAttachRows() };
+      return { date: '', attendees: '', mainRows: defaultMainRows(prefix), attachRows: defaultAttachRows(undefined, prefix) };
     }
   }
 
@@ -258,19 +263,19 @@ const FormGrade = (() => {
     const cfg = getGradeConfig(prefix);
     const raw = localStorage.getItem(storageKey(cfg.id));
     if (!raw) {
-      renderMainRows(prefix, defaultMainRows());
-      renderAttachRows(prefix, defaultAttachRows());
+      renderMainRows(prefix, defaultMainRows(prefix));
+      renderAttachRows(prefix, defaultAttachRows(undefined, prefix));
       return;
     }
     try {
       const data = JSON.parse(raw);
       document.getElementById(`${prefix}-date`).value = data.date || '';
       document.getElementById(`${prefix}-attendees`).value = data.attendees || '';
-      renderMainRows(prefix, (data.mainRows?.length ? data.mainRows : defaultMainRows()).map(migrateMainRow));
-      renderAttachRows(prefix, (data.attachRows?.length ? data.attachRows : defaultAttachRows()).map(migrateAttachRow));
+      renderMainRows(prefix, (data.mainRows?.length ? data.mainRows : defaultMainRows(prefix)).map(migrateMainRow));
+      renderAttachRows(prefix, (data.attachRows?.length ? data.attachRows : defaultAttachRows(undefined, prefix)).map(migrateAttachRow));
     } catch {
-      renderMainRows(prefix, defaultMainRows());
-      renderAttachRows(prefix, defaultAttachRows());
+      renderMainRows(prefix, defaultMainRows(prefix));
+      renderAttachRows(prefix, defaultAttachRows(undefined, prefix));
     }
   }
 
@@ -321,7 +326,7 @@ const FormGrade = (() => {
   function resetMain(prefix) {
     const cfg = getGradeConfig(prefix);
     if (!confirm(`${cfg.label} 교육활동 평가 표를 초기화하시겠습니까?`)) return;
-    const rows = defaultMainRows();
+    const rows = defaultMainRows(prefix);
     writeStored(prefix, { mainRows: rows });
     renderMainRows(prefix, rows);
     showToast(`${cfg.label} 교육활동 평가가 초기화되었습니다.`);
@@ -330,7 +335,7 @@ const FormGrade = (() => {
   function resetAttach(prefix) {
     const cfg = getGradeConfig(prefix);
     if (!confirm(`${cfg.label} 첨부 양식을 초기화하시겠습니까?`)) return;
-    const rows = defaultAttachRows();
+    const rows = defaultAttachRows(undefined, prefix);
     writeStored(prefix, { attachRows: rows });
     renderAttachRows(prefix, rows);
     showToast(`${cfg.label} 첨부 양식이 초기화되었습니다.`);
@@ -342,15 +347,21 @@ const FormGrade = (() => {
     localStorage.removeItem(storageKey(cfg.id));
     document.getElementById(`${prefix}-date`).value = todayStr();
     document.getElementById(`${prefix}-attendees`).value = '';
-    renderMainRows(prefix, defaultMainRows());
-    renderAttachRows(prefix, defaultAttachRows());
+    renderMainRows(prefix, defaultMainRows(prefix));
+    renderAttachRows(prefix, defaultAttachRows(undefined, prefix));
     showToast(`${cfg.label} 협의록이 초기화되었습니다.`);
   }
 
   function refreshMasterViews() {
-    GRADES.forEach(({ prefix, id }) => {
-      renderMasterTable(`${prefix}-master-view`, id);
+    GRADES.forEach(({ prefix }) => {
+      MasterView.mount(`${prefix}-master-view`);
     });
+  }
+
+  function applyTemplate() {
+    if (typeof TemplateStore === 'undefined') return;
+    TemplateStore.applyPinnedTabs();
+    GRADES.forEach(({ prefix }) => TemplateStore.applyGradeTemplate(prefix));
   }
 
   function exportExcel(prefix) {
@@ -377,13 +388,21 @@ const FormGrade = (() => {
 
   function init() {
     buildShell();
+    if (typeof TemplateStore !== 'undefined') {
+      TemplateStore.fetchFromCloud().catch(() => {});
+    }
     initSubTabs('grade-subtabs', '.grade-panel');
     GRADES.forEach(({ prefix }) => {
       load(prefix);
       bindEvents(prefix);
     });
+    applyTemplate();
     refreshMasterViews();
     document.addEventListener('master-updated', refreshMasterViews);
+    document.addEventListener('template-updated', () => {
+      applyTemplate();
+      GRADES.forEach(({ prefix }) => load(prefix));
+    });
   }
 
   return {

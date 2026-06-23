@@ -63,9 +63,13 @@ function setTodayDefault() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initMainTabs();
   setTodayDefault();
+  await CloudSync.init();
+  if (typeof TemplateStore !== 'undefined') {
+    await TemplateStore.fetchFromCloud().catch(() => {});
+  }
   FormGrade.init();
   Form4.init();
   Form5.init();

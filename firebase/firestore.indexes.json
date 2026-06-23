@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "midterm2026_submissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "formType", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

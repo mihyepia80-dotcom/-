@@ -53,6 +53,101 @@ body {
   opacity: 0.85;
 }
 
+.cloud-status {
+  font-size: 0.78rem;
+  margin-top: 0.35rem;
+  opacity: 0.95;
+}
+
+.cloud-status[data-state='warn'] {
+  opacity: 0.75;
+}
+
+.cloud-panel {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #f8fbfe;
+}
+
+.cloud-panel-disabled {
+  background: #fafafa;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.cloud-panel-title {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.cloud-panel-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0.35rem 0 0.75rem;
+}
+
+.cloud-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.submission-list {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.submission-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.submission-item:last-child {
+  border-bottom: none;
+}
+
+.submission-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.submission-meta span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.submission-type {
+  font-size: 0.72rem;
+  color: var(--primary);
+  background: #eaf2f8;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.cloud-empty,
+.cloud-loading {
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.cloud-btn {
+  white-space: nowrap;
+}
+
 /* Tab Navigation */
 .tab-nav {
   display: flex;
@@ -779,8 +874,8 @@ body {
 }
 
 .master-view-wrap {
-  max-height: 420px;
-  overflow: auto;
+  max-height: none;
+  overflow: visible;
 }
 
 .master-view .master-table {

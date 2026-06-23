@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>관리자 대시보드 — 2026 중간평가</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/admin.css" />
+</head>
+<body class="admin-body">
+  <div id="admin-gate" class="admin-gate">
+    <div class="admin-gate-card">
+      <h1>관리자 대시보드</h1>
+      <p class="gate-desc">관리자 암호와 Google 계정으로 로그인하세요.<br>입력 화면(<a href="index.html">메인</a>)은 누구나 접근 가능합니다.</p>
+      <label class="gate-label">관리자 암호
+        <input type="password" id="admin-password" placeholder="관리자 암호" autocomplete="current-password" />
+      </label>
+      <button type="button" class="btn btn-secondary btn-block" id="admin-pw-btn">암호 확인</button>
+      <button type="button" class="btn btn-primary btn-block" id="admin-google-btn" disabled>Google 로그인</button>
+      <p id="gate-msg" class="gate-msg"></p>
+      <a href="index.html" class="gate-link">← 입력 화면으로</a>
+    </div>
+  </div>
+
+  <div id="admin-app" class="admin-app" hidden>
+    <header class="admin-header">
+      <div>
+        <h1>관리자 대시보드</h1>
+        <p id="admin-user-info" class="admin-user-info"></p>
+      </div>
+      <div class="admin-header-actions">
+        <a href="index.html" class="btn btn-outline btn-sm">입력 화면</a>
+        <button type="button" class="btn btn-secondary btn-sm" id="admin-logout">로그아웃</button>
+      </div>
+    </header>
+
+    <nav class="admin-nav" id="admin-nav">
+      <button type="button" class="admin-nav-btn active" data-panel="panel-submissions">제출물 수합</button>
+      <button type="button" class="admin-nav-btn" data-panel="panel-events">행사 검색</button>
+      <button type="button" class="admin-nav-btn" data-panel="panel-templates">양식 배포</button>
+      <button type="button" class="admin-nav-btn" data-panel="panel-gemini">Gemini 분석</button>
+      <button type="button" class="admin-nav-btn" data-panel="panel-master">마스터 시트</button>
+    </nav>
+
+    <main class="admin-main">
+      <section id="panel-submissions" class="admin-panel active">
+        <h2>협의록 제출물 수합</h2>
+        <div class="admin-toolbar">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="AdminDashboard.loadSubmissions()">새로고침</button>
+        </div>
+        <div class="admin-subnav">
+          <button type="button" class="btn btn-outline btn-sm active" data-stype="form-grade" onclick="AdminDashboard.showAggregate('form-grade')">학년 협의록</button>
+          <button type="button" class="btn btn-outline btn-sm" data-stype="form4" onclick="AdminDashboard.showAggregate('form4')">교과/비교과</button>
+          <button type="button" class="btn btn-outline btn-sm" data-stype="form6" onclick="AdminDashboard.showAggregate('form6')">부서 협의록</button>
+        </div>
+        <div id="aggregate-list" class="aggregate-list"></div>
+        <div id="aggregate-detail" class="aggregate-detail"></div>
+      </section>
+
+      <section id="panel-events" class="admin-panel" hidden>
+        <h2>행사 검색</h2>
+        <div class="event-search-bar">
+          <input type="search" id="evt-kw" placeholder="키워드 (행사명·부서)" />
+          <select id="evt-month"><option value="">전체 월</option></select>
+          <select id="evt-grade"><option value="">전체 학년</option></select>
+          <select id="evt-semester">
+            <option value="">전체 학기</option>
+            <option value="1학기">1학기</option>
+            <option value="2학기">2학기</option>
+          </select>
+          <button type="button" class="btn btn-primary btn-sm" onclick="AdminDashboard.searchEvents()">검색</button>
+        </div>
+        <div id="event-results" class="event-results"></div>
+      </section>
+
+      <section id="panel-templates" class="admin-panel" hidden>
+        <h2>학년 협의록 양식 배포</h2>
+        <p class="panel-desc">기본 틀을 수정·고정 후 배포하면 담당자 입력 화면에 반영됩니다. 담당자는 배포된 틀 위에서 자유롭게 편집합니다.</p>
+        <div id="template-editor" class="template-editor"></div>
+        <div class="admin-toolbar">
+          <button type="button" class="btn btn-primary" onclick="AdminDashboard.deployTemplate()">양식 배포</button>
+          <button type="button" class="btn btn-secondary" onclick="AdminDashboard.loadTemplate()">클라우드 불러오기</button>
+        </div>
+        <p id="template-status" class="template-status"></p>
+      </section>
+
+      <section id="panel-gemini" class="admin-panel" hidden>
+        <h2>Gemini 분석</h2>
+        <p class="panel-desc">담당자 제출 데이터를 AI로 요약·분석합니다 (GEMINI_API_KEY — 서버 환경변수).</p>
+        <div class="admin-toolbar">
+          <select id="gemini-form-type">
+            <option value="form-grade">학년 협의록</option>
+            <option value="form4">교과/비교과</option>
+            <option value="form6">부서 협의록</option>
+            <option value="event-eval">행사 평가</option>
+          </select>
+          <button type="button" class="btn btn-primary" onclick="AdminDashboard.runGemini()">분석 실행</button>
+        </div>
+        <label>추가 지시 (선택)
+          <textarea id="gemini-prompt" rows="3" placeholder="예: 1학년 행사 위주로 요약해 주세요"></textarea>
+        </label>
+        <div id="gemini-result" class="gemini-result"></div>
+      </section>
+
+      <section id="panel-master" class="admin-panel" hidden>
+        <h2>마스터 시트 관리</h2>
+        <div class="admin-toolbar">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="AdminDashboard.pullMaster()">클라우드 불러오기</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="AdminDashboard.pushMaster()">클라우드 저장</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="AdminDashboard.mergeEventEval()">행사평가 반영</button>
+        </div>
+        <p class="panel-desc">마스터 편집은 <a href="index.html">입력 화면 1번 탭</a>에서 가능합니다.</p>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script>window.__ENV__ = window.__ENV__ || {};</script>
+  <script src="js/env.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/master.js"></script>
+  <script src="js/master-view.js"></script>
+  <script src="js/firebase.js"></script>
+  <script src="js/templates.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

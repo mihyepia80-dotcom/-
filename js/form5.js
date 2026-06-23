@@ -94,6 +94,7 @@ const Form5 = (() => {
       <div class="form-actions sheet-actions no-print">
         <button type="button" class="btn btn-outline" onclick="Form5.downloadExcel()">Excel 다운</button>
         <button type="button" class="btn btn-outline" onclick="Form5.uploadExcel()">Excel 업로드</button>
+        ${typeof CloudSync !== 'undefined' ? CloudSync.buttonHtml('클라우드 제출 (내 평가)', 'CloudSync.submitEventEval()') : ''}
       </div>
       ${tableToolbar('1학기', '1학기 (3월 ~ 7월)')}
       <div class="table-wrap master-sheet-wrap">
