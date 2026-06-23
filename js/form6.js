@@ -1,196 +1,473 @@
 const Form6 = (() => {
   const STORAGE_KEY = 'midterm-form6';
+  let activeDeptId = DEPARTMENTS[0].id;
+  let viewerName = '';
+  let store = { rowData: {}, customRows: {} };
 
-  function esc(str) {
-    return String(str || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+  function deptTabLabel(dept) {
+    return dept.name.replace(/^\d+\)\s*/, '');
   }
 
-  function createDeptTable(dept, savedRows) {
-    if (dept.special) {
-      const saved = savedRows?.result || '';
-      return `
-        <div class="dept-special">
-          <p class="dept-special-title">${esc(dept.description)}</p>
-          <p class="dept-special-detail">${esc(dept.detail)}</p>
-          <div class="dept-special-result">
-            <label>1학기 업무추진결과 및 2학기 계획</label>
-            <textarea class="dept-result-input" data-dept="${dept.id}" rows="6"
-              placeholder="업무추진결과 및 2학기 계획을 입력하세요">${esc(saved)}</textarea>
-          </div>
-        </div>`;
+  function baseRowKey(deptId, index) {
+    return `${deptId}-${index}`;
+  }
+
+  function emptyStore() {
+    return { rowData: {}, customRows: {} };
+  }
+
+  function getRowState(key, isOther = false) {
+    if (!store.rowData[key]) {
+      store.rowData[key] = { tasks: defaultTasks(isOther), updatedAt: '' };
     }
+    return store.rowData[key];
+  }
 
-    const rows = savedRows || dept.rows.map((r) => ({
-      category: r.category,
-      person: r.person,
-      work: r.work,
-      result: r.resultTemplate || '',
-    }));
+  function getCustomRows(deptId) {
+    if (!store.customRows[deptId]) store.customRows[deptId] = [];
+    return store.customRows[deptId];
+  }
 
-    const bodyRows = rows.map((row, i) => `
-      <tr data-dept="${dept.id}" data-row="${i}">
-        <td class="category-col"><textarea class="cell-textarea cat-input" rows="3">${esc(row.category)}</textarea></td>
-        <td><input type="text" class="cell-input person-input" value="${esc(row.person)}" /></td>
-        <td><textarea class="cell-textarea work-input" rows="4">${esc(row.work)}</textarea></td>
-        <td><textarea class="cell-textarea result-input" rows="6">${esc(row.result)}</textarea></td>
-        <td class="no-print"><button type="button" class="btn btn-danger" onclick="Form6.removeRow('${dept.id}', ${i})">×</button></td>
-      </tr>
-    `).join('');
+  function buildShell() {
+    const section = document.getElementById('form6');
+    const subTabs = DEPARTMENTS.map(
+      (dept) =>
+        `<button type="button" class="sub-tab-btn${dept.id === activeDeptId ? ' active' : ''}"
+          data-target="dept-panel-${dept.id}" data-dept-id="${dept.id}" role="tab"
+          aria-selected="${dept.id === activeDeptId}">${esc(deptTabLabel(dept))}</button>`
+    ).join('');
 
-    return `
-      <div class="table-wrap">
-        <table class="eval-table dept-table">
-          <thead>
-            <tr>
-              <th class="col-category">계</th>
-              <th class="col-person">담당자</th>
-              <th class="col-work">업 무 내 용</th>
-              <th class="col-plan">1학기 업무추진결과 및 2학기 계획</th>
-              <th class="col-action no-print">삭제</th>
-            </tr>
-          </thead>
-          <tbody id="form6-body-${dept.id}">${bodyRows}</tbody>
-        </table>
+    section.innerHTML = `
+      <div class="form-header form-header-main">
+        <h2>부서별 협의록</h2>
+        <p class="form-desc">담당자 이름 입력 시 본인 작성란만 표시됩니다</p>
       </div>
-      <div class="dept-actions no-print">
-        <button type="button" class="btn btn-secondary" onclick="Form6.addRow('${dept.id}')">행 추가</button>
+      <nav class="sub-tab-nav" id="f6-subtabs" role="tablist">${subTabs}</nav>
+      <div class="dept-toolbar no-print">
+        <div class="meta-fields">
+          <label>담당자 이름 <input type="text" id="f6-viewer-name" placeholder="본인 이름 입력 (예: 김이경)" /></label>
+          <label>작성일 <input type="date" id="f6-date" /></label>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" id="f6-add-person-btn" onclick="Form6.addPerson()">+ 담당자 추가</button>
+          <button type="button" class="btn btn-outline" onclick="Form6.clearViewer()">전체 보기</button>
+          <button type="button" class="btn btn-outline" onclick="Form6.exportExcel()">Excel 다운</button>
+          <button type="button" class="btn btn-outline" onclick="window.print()">인쇄</button>
+        </div>
+      </div>
+      <div id="f6-departments" class="dept-list"></div>
+    `;
+  }
+
+  function taskBlockHtml(key, task, taskIndex, canDeleteTask) {
+    return `
+      <div class="task-block" data-task-id="${task.id}">
+        <textarea class="dept-result task-content" rows="8" data-key="${key}" data-task-id="${task.id}">${esc(task.content)}</textarea>
+        ${canDeleteTask ? `<button type="button" class="btn btn-danger btn-sm no-print task-del-btn" onclick="Form6.removeTask('${key}', '${task.id}')">업무 삭제</button>` : ''}
       </div>`;
   }
 
-  function render() {
-    const container = document.getElementById('form6-departments');
-    const saved = loadAll();
-    container.innerHTML = DEPARTMENTS.map((dept) => `
-      <div class="dept-section" id="dept-${dept.id}" data-dept="${dept.id}">
+  function personCardHtml(key, meta, state) {
+    const tasks = state.tasks?.length ? state.tasks : defaultTasks(meta.isOther);
+    const canDeletePerson = meta.isCustom;
+    const canDeleteTask = tasks.length > 1;
+
+    return `
+      <div class="person-card" data-row-key="${key}" data-person="${esc(meta.person)}" data-is-custom="${meta.isCustom ? '1' : '0'}">
+        <div class="person-card-head">
+          <div class="person-meta">
+            <span class="person-category">${esc(meta.category).replace(/\n/g, ' · ')}</span>
+            <span class="person-name">${esc(meta.person) || '(담당자 미지정)'}</span>
+          </div>
+          <div class="person-actions no-print">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="Form6.addTask('${key}')">+ 업무</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="Form6.saveRow('${key}')">저장</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="Form6.resetRow('${key}')">초기화</button>
+            ${canDeletePerson ? `<button type="button" class="btn btn-danger btn-sm" onclick="Form6.deleteRow('${key}')">삭제</button>` : ''}
+          </div>
+        </div>
+        <div class="person-work">${esc(meta.work).replace(/\n/g, '<br>')}</div>
+        ${meta.isCustom ? `
+          <div class="custom-fields no-print">
+            <label>계 <input type="text" class="custom-category" value="${esc(meta.category)}" placeholder="업무영역" /></label>
+            <label>담당자 <input type="text" class="custom-person" value="${esc(meta.person)}" placeholder="담당자 이름" /></label>
+            <label>업무내용 <input type="text" class="custom-work" value="${esc(meta.work)}" placeholder="업무 내용" /></label>
+          </div>` : ''}
+        <div class="task-list">
+          ${tasks.map((t, i) => taskBlockHtml(key, t, i, canDeleteTask)).join('')}
+        </div>
+        ${state.updatedAt ? `<p class="saved-at">마지막 저장: ${esc(state.updatedAt)}</p>` : ''}
+      </div>`;
+  }
+
+  function createDeptSection(dept) {
+    const section = document.createElement('div');
+    section.className = 'dept-section sub-panel dept-panel';
+    section.id = `dept-panel-${dept.id}`;
+    section.dataset.deptId = dept.id;
+    section.hidden = dept.id !== activeDeptId;
+
+    if (dept.isSpecial) {
+      const key = `${dept.id}-special`;
+      const state = getRowState(key);
+      section.innerHTML = `
         <h3 class="dept-title">${esc(dept.name)}</h3>
-        ${createDeptTable(dept, saved[dept.id])}
-      </div>
-    `).join('');
-  }
-
-  function loadAll() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    try { return JSON.parse(raw).departments || {}; } catch { return {}; }
-  }
-
-  function getDeptRows(deptId) {
-    const dept = DEPARTMENTS.find((d) => d.id === deptId);
-    if (dept?.special) {
-      const el = document.querySelector(`.dept-result-input[data-dept="${deptId}"]`);
-      return { result: el?.value || '' };
+        <div class="special-dept person-card" data-row-key="${key}">
+          <p class="special-label">${esc(dept.description)}</p>
+          <p class="special-work">${esc(dept.work)}</p>
+          <div class="person-actions no-print">
+            <button type="button" class="btn btn-primary btn-sm" onclick="Form6.saveRow('${key}')">저장</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="Form6.resetRow('${key}')">초기화</button>
+          </div>
+          <textarea class="dept-result special-result task-content" data-key="${key}" data-task-id="${state.tasks[0].id}" rows="8">${esc(state.tasks[0].content)}</textarea>
+          ${state.updatedAt ? `<p class="saved-at">마지막 저장: ${esc(state.updatedAt)}</p>` : ''}
+        </div>`;
+      return section;
     }
+
+    const cards = [];
+    dept.rows.forEach((row, i) => {
+      const key = baseRowKey(dept.id, i);
+      cards.push(
+        personCardHtml(
+          key,
+          { category: row.category, person: row.person, work: row.work, isOther: row.isOther, isCustom: false },
+          getRowState(key, row.isOther)
+        )
+      );
+    });
+
+    getCustomRows(dept.id).forEach((custom) => {
+      cards.push(
+        personCardHtml(
+          custom.id,
+          { category: custom.category, person: custom.person, work: custom.work, isCustom: true },
+          getRowState(custom.id)
+        )
+      );
+    });
+
+    section.innerHTML = `
+      <h3 class="dept-title">${esc(dept.name)}</h3>
+      <p class="filter-hint no-print">${viewerName ? `「${esc(viewerName)}」님의 작성란` : '담당자 이름을 입력하면 본인 작성란만 표시됩니다.'}</p>
+      <p class="filter-empty no-print" hidden>이 부서에 해당하는 담당자 작성란이 없습니다.</p>
+      <div class="person-cards">${cards.join('')}</div>`;
+    return section;
+  }
+
+  function applyPersonFilter() {
+    const name = document.getElementById('f6-viewer-name')?.value?.trim() || '';
+    viewerName = name;
+
+    document.querySelectorAll('.dept-panel').forEach((panel) => {
+      const cards = panel.querySelectorAll('.person-card[data-row-key]');
+      let visibleCount = 0;
+      cards.forEach((card) => {
+        const person = card.dataset.person || '';
+        const show = !name || (person.trim() && namesMatch(person, name));
+        card.hidden = !show;
+        if (show) visibleCount += 1;
+      });
+
+      const special = panel.querySelector('.special-dept');
+      if (special) special.hidden = !!name;
+
+      const hint = panel.querySelector('.filter-hint');
+      const empty = panel.querySelector('.filter-empty');
+      if (hint) {
+        hint.textContent = name ? `「${name}」님의 작성란` : '담당자 이름을 입력하면 본인 작성란만 표시됩니다.';
+      }
+      if (empty) {
+        empty.hidden = !name || visibleCount > 0 || !!panel.querySelector('.special-dept:not([hidden])');
+      }
+    });
+
+    const addBtn = document.getElementById('f6-add-person-btn');
+    if (addBtn) addBtn.hidden = !!name;
+  }
+
+  function clearViewer() {
+    const input = document.getElementById('f6-viewer-name');
+    if (input) input.value = '';
+    viewerName = '';
+    applyPersonFilter();
+    persistStore();
+  }
+
+  function readCardFromDOM(key) {
+    const card = document.querySelector(`.person-card[data-row-key="${key}"]`);
+    if (!card) return null;
+
+    const tasks = [];
+    card.querySelectorAll('.task-content').forEach((ta) => {
+      tasks.push({ id: ta.dataset.taskId || newId(), content: ta.value });
+    });
+
+    const isCustom = card.dataset.isCustom === '1';
+    const state = { tasks, updatedAt: store.rowData[key]?.updatedAt || '' };
+
+    if (isCustom) {
+      const custom = getCustomRows(activeDeptId).find((c) => c.id === key);
+      if (custom) {
+        custom.category = card.querySelector('.custom-category')?.value || '';
+        custom.person = card.querySelector('.custom-person')?.value || '';
+        custom.work = card.querySelector('.custom-work')?.value || '';
+      }
+    }
+
+    return state;
+  }
+
+  function syncFromDOM() {
+    document.querySelectorAll('.person-card[data-row-key]').forEach((card) => {
+      const key = card.dataset.rowKey;
+      const state = readCardFromDOM(key);
+      if (state) store.rowData[key] = state;
+    });
+  }
+
+  function persistStore() {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        activeDeptId,
+        viewerName: document.getElementById('f6-viewer-name')?.value?.trim() || '',
+        date: document.getElementById('f6-date')?.value || '',
+        rowData: store.rowData,
+        customRows: store.customRows,
+      })
+    );
+  }
+
+  function renderDepts() {
+    const container = document.getElementById('f6-departments');
+    container.innerHTML = '';
+    DEPARTMENTS.forEach((dept) => container.appendChild(createDeptSection(dept)));
+    bindCustomFieldListeners();
+    applyPersonFilter();
+  }
+
+  function bindCustomFieldListeners() {
+    document.querySelectorAll('.custom-person, .custom-category, .custom-work').forEach((el) => {
+      el.addEventListener('input', debounce(() => {
+        const card = el.closest('.person-card');
+        const nameEl = card.querySelector('.person-name');
+        if (nameEl && el.classList.contains('custom-person')) {
+          nameEl.textContent = el.value.trim() || '(담당자 미지정)';
+          card.dataset.person = el.value.trim();
+        }
+      }, 300));
+    });
+  }
+
+  function switchDept(deptId) {
+    activeDeptId = deptId;
+    document.querySelectorAll('.dept-panel').forEach((panel) => {
+      panel.hidden = panel.dataset.deptId !== deptId;
+    });
+    document.querySelectorAll('#f6-subtabs .sub-tab-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.deptId === deptId);
+      btn.setAttribute('aria-selected', btn.dataset.deptId === deptId ? 'true' : 'false');
+    });
+  }
+
+  function saveRow(key) {
+    syncFromDOM();
+    const state = store.rowData[key];
+    if (state) state.updatedAt = new Date().toLocaleString('ko-KR');
+    persistStore();
+    renderDepts();
+    switchDept(activeDeptId);
+    showToast('저장되었습니다.');
+  }
+
+  function resetRow(key) {
+    if (!confirm('이 담당자의 업무 내용을 초기화하시겠습니까?')) return;
+    syncFromDOM();
+    const dept = DEPARTMENTS.find((d) => d.id === activeDeptId);
+    let isOther = false;
+    if (dept && !dept.isSpecial) {
+      const idx = dept.rows.findIndex((_, i) => baseRowKey(dept.id, i) === key);
+      if (idx >= 0) isOther = !!dept.rows[idx].isOther;
+    }
+    store.rowData[key] = { tasks: defaultTasks(isOther), updatedAt: '' };
+    persistStore();
+    renderDepts();
+    switchDept(activeDeptId);
+    showToast('초기화되었습니다.');
+  }
+
+  function deleteRow(key) {
+    if (!confirm('이 담당자 행을 삭제하시겠습니까?')) return;
+    syncFromDOM();
+    store.customRows[activeDeptId] = getCustomRows(activeDeptId).filter((c) => c.id !== key);
+    delete store.rowData[key];
+    persistStore();
+    renderDepts();
+    switchDept(activeDeptId);
+    showToast('삭제되었습니다.');
+  }
+
+  function addTask(key) {
+    syncFromDOM();
+    const state = getRowState(key);
+    state.tasks.push(defaultTask());
+    persistStore();
+    renderDepts();
+    switchDept(activeDeptId);
+  }
+
+  function removeTask(key, taskId) {
+    syncFromDOM();
+    const state = getRowState(key);
+    if (state.tasks.length <= 1) {
+      showToast('최소 1개 업무는 유지해야 합니다.');
+      return;
+    }
+    state.tasks = state.tasks.filter((t) => t.id !== taskId);
+    persistStore();
+    renderDepts();
+    switchDept(activeDeptId);
+  }
+
+  function addPerson() {
+    syncFromDOM();
+    const id = `${activeDeptId}-custom-${newId()}`;
+    getCustomRows(activeDeptId).push({
+      id,
+      category: '',
+      person: '',
+      work: '',
+    });
+    store.rowData[id] = { tasks: defaultTasks(), updatedAt: '' };
+    persistStore();
+    renderDepts();
+    switchDept(activeDeptId);
+    showToast('담당자 칸이 추가되었습니다.');
+  }
+
+  function exportExcel(deptId = activeDeptId) {
+    syncFromDOM();
+    const dept = DEPARTMENTS.find((d) => d.id === deptId);
+    if (!dept) return;
     const rows = [];
-    document.querySelectorAll(`#form6-body-${deptId} tr`).forEach((tr) => {
-      rows.push({
-        category: tr.querySelector('.cat-input')?.value || '',
-        person: tr.querySelector('.person-input')?.value || '',
-        work: tr.querySelector('.work-input')?.value || '',
-        result: tr.querySelector('.result-input')?.value || '',
+
+    dept.rows.forEach((row, i) => {
+      const key = baseRowKey(dept.id, i);
+      const state = store.rowData[key] || { tasks: [] };
+      state.tasks.forEach((task, ti) => {
+        rows.push([row.category.replace(/\n/g, ' '), row.person, row.work, `업무${ti + 1}`, task.content]);
       });
     });
-    return rows;
+
+    getCustomRows(dept.id).forEach((custom) => {
+      const state = store.rowData[custom.id] || { tasks: [] };
+      state.tasks.forEach((task, ti) => {
+        rows.push([custom.category, custom.person, custom.work, `업무${ti + 1}`, task.content]);
+      });
+    });
+
+    if (dept.isSpecial) {
+      const key = `${dept.id}-special`;
+      const state = store.rowData[key];
+      if (state?.tasks?.[0]) {
+        rows.push([dept.description, '', dept.work, '업무1', state.tasks[0].content]);
+      }
+    }
+
+    ExcelIO.download(
+      `${deptTabLabel(dept)}_협의록.xlsx`,
+      deptTabLabel(dept),
+      ['계', '담당자', '업무내용', '업무구분', '추진결과 및 계획'],
+      rows
+    );
+    showToast('Excel 파일을 다운로드했습니다.');
   }
 
-  function save() {
-    const departments = {};
-    DEPARTMENTS.forEach((dept) => {
-      departments[dept.id] = getDeptRows(dept.id);
+  function migrateLegacy(data) {
+    if (data.rowData) return data;
+    const rowData = {};
+    Object.entries(data.results || {}).forEach(([key, content]) => {
+      rowData[key] = {
+        tasks: [{ id: newId(), content: String(content) }],
+        updatedAt: '',
+      };
     });
-    const data = {
-      date: document.getElementById('f6-date').value,
-      departments,
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    showToast('서식 6이 저장되었습니다.');
+    return { ...data, rowData, customRows: data.customRows || {} };
   }
 
   function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
+    activeDeptId = DEPARTMENTS[0].id;
+    store = emptyStore();
+
+    if (raw) {
+      try {
+        const data = migrateLegacy(JSON.parse(raw));
+        activeDeptId = data.activeDeptId && DEPARTMENTS.some((d) => d.id === data.activeDeptId) ? data.activeDeptId : DEPARTMENTS[0].id;
+        store.rowData = data.rowData || {};
+        store.customRows = data.customRows || {};
+        viewerName = data.viewerName || '';
+      } catch {
+        store = emptyStore();
+      }
+    }
+
+    buildShell();
     if (raw) {
       try {
         const data = JSON.parse(raw);
-        document.getElementById('f6-date').value = data.date || new Date().toISOString().split('T')[0];
-      } catch { /* ignore */ }
+        document.getElementById('f6-date').value = data.date || todayStr();
+        const nameInput = document.getElementById('f6-viewer-name');
+        if (nameInput) nameInput.value = data.viewerName || viewerName || '';
+      } catch {
+        /* ignore */
+      }
     }
-    render();
-  }
 
-  function scrollToDept(deptId) {
-    document.querySelectorAll('.dept-nav-btn').forEach((btn) => {
-      btn.classList.toggle('active', btn.dataset.dept === deptId);
-    });
-    const el = document.getElementById(`dept-${deptId}`);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  function addRow(deptId) {
-    const tbody = document.getElementById(`form6-body-${deptId}`);
-    if (!tbody) return;
-    const i = tbody.children.length;
-    const tr = document.createElement('tr');
-    tr.dataset.dept = deptId;
-    tr.dataset.row = i;
-    tr.innerHTML = `
-      <td class="category-col"><textarea class="cell-textarea cat-input" rows="3"></textarea></td>
-      <td><input type="text" class="cell-input person-input" /></td>
-      <td><textarea class="cell-textarea work-input" rows="4"></textarea></td>
-      <td><textarea class="cell-textarea result-input" rows="6">■ </textarea></td>
-      <td class="no-print"><button type="button" class="btn btn-danger" onclick="Form6.removeRow('${deptId}', ${i})">×</button></td>
-    `;
-    tbody.appendChild(tr);
-    save();
-  }
-
-  function removeRow(deptId, rowIdx) {
-    const rows = getDeptRows(deptId);
-    if (!Array.isArray(rows) || rows.length <= 1) {
-      showToast('최소 1개 행은 유지해야 합니다.');
-      return;
-    }
-    rows.splice(rowIdx, 1);
-    const departments = {};
     DEPARTMENTS.forEach((dept) => {
-      departments[dept.id] = dept.id === deptId ? rows : getDeptRows(dept.id);
+      if (!dept.isSpecial) {
+        dept.rows.forEach((row, i) => getRowState(baseRowKey(dept.id, i), row.isOther));
+      } else {
+        getRowState(`${dept.id}-special`);
+      }
     });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      date: document.getElementById('f6-date').value,
-      departments,
-    }));
-    render();
-    showToast('행이 삭제되었습니다.');
-  }
 
-  function reset() {
-    if (!confirm('서식 6의 모든 부서 데이터를 초기화하시겠습니까?')) return;
-    localStorage.removeItem(STORAGE_KEY);
-    document.getElementById('f6-date').value = new Date().toISOString().split('T')[0];
-    render();
-    showToast('서식 6이 초기화되었습니다.');
+    renderDepts();
+    switchDept(activeDeptId);
+
+    document.getElementById('f6-date').addEventListener('change', persistStore);
+    const nameInput = document.getElementById('f6-viewer-name');
+    nameInput.addEventListener('input', debounce(() => {
+      applyPersonFilter();
+      persistStore();
+    }, 300));
+    initSubTabs('f6-subtabs', '.dept-panel');
+    document.getElementById('f6-subtabs').addEventListener('subtab-change', (e) => {
+      syncFromDOM();
+      persistStore();
+      const deptId = e.detail.btn?.dataset.deptId;
+      if (deptId) {
+        activeDeptId = deptId;
+        switchDept(deptId);
+        applyPersonFilter();
+      }
+    });
   }
 
   function init() {
     load();
-    document.getElementById('f6-date').addEventListener('change', save);
-    document.getElementById('form6-departments').addEventListener('input', debounce(save, 800));
-
-    const nav = document.getElementById('form6-dept-nav');
-    nav.innerHTML = DEPARTMENTS.map((d) => `
-      <button type="button" class="dept-nav-btn" data-dept="${d.id}" onclick="Form6.scrollToDept('${d.id}')">${esc(d.name.replace(/^\d+\)\s*/, ''))}</button>
-    `).join('');
   }
 
-  function debounce(fn, ms) {
-    let timer;
-    return (...args) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => fn(...args), ms);
-    };
-  }
-
-  return { init, save, reset, addRow, removeRow, scrollToDept };
+  return {
+    init,
+    saveRow,
+    resetRow,
+    deleteRow,
+    addTask,
+    removeTask,
+    addPerson,
+    exportExcel,
+    clearViewer,
+  };
 })();

@@ -3,323 +3,57 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2026-1학기 학교 중간평가</title>
+  <title>2026학년도 학교 중간평가</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
   <header class="site-header">
     <div class="header-inner">
-      <h1>2026학년도 1학기 학교 중간평가</h1>
-      <p class="subtitle">부서별 · 담당업무 · 교육활동 평가 서식</p>
+      <h1>2026학년도 학교 중간평가</h1>
+      <p class="subtitle">행사 마스터 · 학년 협의록 · 교과/비교과 · 부서별 협의록</p>
     </div>
   </header>
 
-  <nav class="tab-nav" role="tablist">
-    <button class="tab-btn active" data-tab="form1" role="tab" aria-selected="true">
-      <span class="tab-num">1</span><span class="tab-label">월별 중간평가</span>
+  <nav class="tab-nav main-nav" role="tablist">
+    <button class="tab-btn active" data-tab="form5" role="tab" aria-selected="true">
+      <span class="tab-num">1</span><span class="tab-label">행사 마스터</span>
     </button>
-    <button class="tab-btn" data-tab="form2" role="tab" aria-selected="false">
-      <span class="tab-num">2</span><span class="tab-label">담당업무</span>
-    </button>
-    <button class="tab-btn" data-tab="form3" role="tab" aria-selected="false">
-      <span class="tab-num">3</span><span class="tab-label">협의록(학년)</span>
-    </button>
-    <button class="tab-btn" data-tab="formAttach" role="tab" aria-selected="false">
-      <span class="tab-num">첨</span><span class="tab-label">학년별 첨부</span>
+    <button class="tab-btn" data-tab="form-grade" role="tab" aria-selected="false">
+      <span class="tab-num">2</span><span class="tab-label">학년 협의록</span>
     </button>
     <button class="tab-btn" data-tab="form4" role="tab" aria-selected="false">
-      <span class="tab-num">4</span><span class="tab-label">교과/비교과</span>
-    </button>
-    <button class="tab-btn" data-tab="form5" role="tab" aria-selected="false">
-      <span class="tab-num">5</span><span class="tab-label">행사 확인</span>
+      <span class="tab-num">3</span><span class="tab-label">교과/비교과</span>
     </button>
     <button class="tab-btn" data-tab="form6" role="tab" aria-selected="false">
-      <span class="tab-num">6</span><span class="tab-label">부서별 협의록</span>
+      <span class="tab-num">4</span><span class="tab-label">부서 협의록</span>
     </button>
   </nav>
 
   <main class="main-content">
-    <!-- 서식 1 -->
-    <section id="form1" class="form-panel active" role="tabpanel">
-      <div class="form-header">
-        <h2>2026-1학기 부서별(담당자) 월별 중간평가 항목 작성</h2>
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="Form1.addRow()">행 추가</button>
-          <button type="button" class="btn btn-secondary" onclick="Form1.reset()">초기화</button>
-          <button type="button" class="btn btn-primary" onclick="Form1.save()">저장</button>
-          <button type="button" class="btn btn-outline" onclick="window.print()">인쇄</button>
-        </div>
-      </div>
 
-      <div class="meta-fields no-print">
-        <label>부서명 <input type="text" id="f1-department" placeholder="예: 교무부" /></label>
-        <label>작성자 <input type="text" id="f1-writer" placeholder="담당자 성명" /></label>
-        <label>작성일 <input type="date" id="f1-date" /></label>
-      </div>
+    <!-- 1) 행사 마스터 · 행사 평가 (Form5.init에서 렌더) -->
+    <section id="form5" class="form-panel active" role="tabpanel"></section>
 
-      <div class="table-wrap">
-        <table class="eval-table" id="form1-table">
-          <thead>
-            <tr>
-              <th class="col-month">월</th>
-              <th class="col-grade">대상학년<br><small>(참여시간)</small></th>
-              <th class="col-activity">주요 교육활동(행사)</th>
-              <th class="col-dept">부서(담당)</th>
-              <th class="col-result">추진결과 및 보완점</th>
-              <th class="col-action no-print">삭제</th>
-            </tr>
-          </thead>
-          <tbody id="form1-body"></tbody>
-        </table>
-      </div>
-    </section>
+    <section id="form-grade" class="form-panel" role="tabpanel" hidden></section>
+    <section id="form4" class="form-panel" role="tabpanel" hidden></section>
+    <section id="form6" class="form-panel" role="tabpanel" hidden></section>
 
-    <!-- 서식 2 -->
-    <section id="form2" class="form-panel" role="tabpanel" hidden>
-      <div class="form-header">
-        <h2>2026-1학기 부서별 담당업무 담당자 중간평가 항목 작성</h2>
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="Form2.addTask()">업무 추가</button>
-          <button type="button" class="btn btn-secondary" onclick="Form2.reset()">초기화</button>
-          <button type="button" class="btn btn-primary" onclick="Form2.save()">저장</button>
-          <button type="button" class="btn btn-outline" onclick="window.print()">인쇄</button>
-        </div>
-      </div>
-
-      <div class="meta-fields no-print">
-        <label>업무영역 <input type="text" id="f2-area" placeholder="예: 교무, 학생생활" /></label>
-        <label>담당 <input type="text" id="f2-person" placeholder="담당자 성명" /></label>
-        <label>작성일 <input type="date" id="f2-date" /></label>
-      </div>
-
-      <div class="table-wrap">
-        <table class="eval-table form2-header-table">
-          <thead>
-            <tr>
-              <th class="col-area">업무영역</th>
-              <th class="col-person">담당</th>
-              <th class="col-work">업 무 내 용</th>
-              <th class="col-plan">1학기 업무추진결과 및 2학기 계획</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="header-info-row">
-              <td><span class="print-only" id="f2-area-print"></span><input type="text" class="no-print cell-input" id="f2-area-cell" placeholder="업무영역" /></td>
-              <td><span class="print-only" id="f2-person-print"></span><input type="text" class="no-print cell-input" id="f2-person-cell" placeholder="담당" /></td>
-              <td colspan="2"><textarea class="cell-textarea" id="f2-work-content" rows="2" placeholder="업무 내용을 입력하세요"></textarea></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div id="form2-tasks" class="task-list"></div>
-
-      <div class="other-section">
-        <h3>기타협의 안건</h3>
-        <textarea id="f2-other" rows="4" placeholder="기타 협의 안건을 입력하세요"></textarea>
-      </div>
-    </section>
-
-    <!-- 서식 3 -->
-    <section id="form3" class="form-panel" role="tabpanel" hidden>
-      <div class="form-header">
-        <h2>2026학년도 1학기 교육활동 평가 협의록(학년)</h2>
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="Form3.addRow()">행 추가</button>
-          <button type="button" class="btn btn-secondary" onclick="Form3.reset()">초기화</button>
-          <button type="button" class="btn btn-primary" onclick="Form3.save()">저장</button>
-          <button type="button" class="btn btn-outline" onclick="window.print()">인쇄</button>
-        </div>
-      </div>
-
-      <div class="meta-fields no-print">
-        <label>학년 <select id="f3-grade">
-          <option value="">선택</option>
-          <option value="1학년">1학년</option>
-          <option value="2학년">2학년</option>
-          <option value="3학년">3학년</option>
-        </select></label>
-        <label>협의일 <input type="date" id="f3-date" /></label>
-        <label>참석자 <input type="text" id="f3-attendees" placeholder="참석 교사명" /></label>
-      </div>
-
-      <div class="table-wrap">
-        <table class="eval-table" id="form3-table">
-          <thead>
-            <tr>
-              <th class="col-month">월</th>
-              <th class="col-grade">대상학년<br><small>(시간)</small></th>
-              <th class="col-content">내 용</th>
-              <th class="col-satisfaction">만족도<br><small>5, 4, 3, 2, 1</small></th>
-              <th class="col-reason">평가 사유<br><small>(좋았던 점 or 보완이 필요한 점)</small></th>
-              <th class="col-action no-print">삭제</th>
-            </tr>
-          </thead>
-          <tbody id="form3-body"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- 1-3) 학년별 협의록 첨부 양식 -->
-    <section id="formAttach" class="form-panel" role="tabpanel" hidden>
-      <div class="form-header">
-        <h2>1-3) 학년별 협의록 첨부 양식</h2>
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="FormAttach.reset()">초기화</button>
-          <button type="button" class="btn btn-primary" onclick="FormAttach.save()">저장</button>
-          <button type="button" class="btn btn-outline" onclick="window.print()">인쇄</button>
-        </div>
-      </div>
-
-      <div class="meta-fields no-print">
-        <label>작성일 <input type="date" id="f-attach-date" /></label>
-      </div>
-
-      <nav class="grade-tab-nav no-print">
-        <button type="button" class="grade-tab-btn active" data-grade="1학년">1학년</button>
-        <button type="button" class="grade-tab-btn" data-grade="2학년">2학년</button>
-        <button type="button" class="grade-tab-btn" data-grade="3학년">3학년</button>
-      </nav>
-
-      <div class="table-wrap">
-        <table class="eval-table">
-          <thead>
-            <tr>
-              <th class="col-num">번호</th>
-              <th>교사·학부모 및 기타 내용<br><small>좋았던 점 or 보완이 필요한 점 자유 기술</small></th>
-            </tr>
-          </thead>
-          <tbody id="form-attach-body"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- 서식 4 -->
-    <section id="form4" class="form-panel" role="tabpanel" hidden>
-      <div class="form-header">
-        <h2>4) 2026학년도 1학기 교육활동 평가(교과/비교과용)</h2>
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="Form4.reset()">초기화</button>
-          <button type="button" class="btn btn-primary" onclick="Form4.save()">저장</button>
-          <button type="button" class="btn btn-outline" onclick="window.print()">인쇄</button>
-        </div>
-      </div>
-
-      <div class="meta-fields no-print">
-        <label>작성자 <input type="text" id="f4-writer" placeholder="교사 성명" /></label>
-        <label>작성일 <input type="date" id="f4-date" /></label>
-      </div>
-
-      <div class="table-wrap">
-        <table class="eval-table" id="form4-eval-table">
-          <thead>
-            <tr>
-              <th class="col-category">구분</th>
-              <th class="col-target">대상<br><small>(학년 또는 교사)</small></th>
-              <th class="col-program">프로그램 내용</th>
-              <th class="col-satisfaction">만족도<br><small>5, 4, 3, 2, 1</small></th>
-              <th class="col-reason">평가 사유<br><small>(좋았던 점 or 보완이 필요한 점)</small></th>
-              <th class="col-action no-print">삭제</th>
-            </tr>
-          </thead>
-          <tbody id="form4-eval-body"></tbody>
-        </table>
-      </div>
-
-      <div class="category-add-btns no-print">
-        <span>행 추가:</span>
-        <button type="button" class="btn btn-secondary" onclick="Form4.addEvalRow('self')">본인</button>
-        <button type="button" class="btn btn-secondary" onclick="Form4.addEvalRow('host')">주관</button>
-        <button type="button" class="btn btn-secondary" onclick="Form4.addEvalRow('event')">행사</button>
-        <button type="button" class="btn btn-secondary" onclick="Form4.addEvalRow('work')">업무</button>
-      </div>
-
-      <div class="other-section" style="margin-top:1.5rem">
-        <h3>교사·학부모 및 기타 내용</h3>
-        <p class="section-desc">좋았던 점 or 보완이 필요한 점 자유 기술</p>
-        <div class="table-wrap">
-          <table class="eval-table">
-            <thead>
-              <tr>
-                <th class="col-num">번호</th>
-                <th>내용</th>
-              </tr>
-            </thead>
-            <tbody id="form4-extra-body"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- 서식 5 -->
-    <section id="form5" class="form-panel" role="tabpanel" hidden>
-      <div class="form-header">
-        <h2>5) 2026-1학기 행사 등 확인</h2>
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="Form5.addRow()">행 추가</button>
-          <button type="button" class="btn btn-secondary" onclick="Form5.reset()">초기화</button>
-          <button type="button" class="btn btn-primary" onclick="Form5.save()">저장</button>
-          <button type="button" class="btn btn-outline" onclick="window.print()">인쇄</button>
-        </div>
-      </div>
-
-      <div class="meta-fields no-print">
-        <label>부서명 <input type="text" id="f5-department" placeholder="예: 교무부" /></label>
-        <label>작성자 <input type="text" id="f5-writer" placeholder="담당자 성명" /></label>
-        <label>작성일 <input type="date" id="f5-date" /></label>
-      </div>
-
-      <div class="table-wrap">
-        <table class="eval-table" id="form5-table">
-          <thead>
-            <tr>
-              <th class="col-month">월</th>
-              <th class="col-grade">대상학년<br><small>(참여시간)</small></th>
-              <th class="col-activity">주요 교육활동(행사)</th>
-              <th class="col-dept">부서(담당)</th>
-              <th class="col-result">추진결과 및 보완점</th>
-              <th class="col-action no-print">삭제</th>
-            </tr>
-          </thead>
-          <tbody id="form5-body"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- 서식 6 -->
-    <section id="form6" class="form-panel" role="tabpanel" hidden>
-      <div class="form-header">
-        <h2>6) 2026 1학기 부서별 협의록</h2>
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="Form6.reset()">초기화</button>
-          <button type="button" class="btn btn-primary" onclick="Form6.save()">저장</button>
-          <button type="button" class="btn btn-outline" onclick="window.print()">인쇄</button>
-        </div>
-      </div>
-
-      <div class="meta-fields no-print">
-        <label>작성일 <input type="date" id="f6-date" /></label>
-      </div>
-
-      <nav class="dept-nav no-print" id="form6-dept-nav"></nav>
-
-      <div id="form6-departments" class="dept-list"></div>
-    </section>
   </main>
 
   <footer class="site-footer no-print">
-    <p>데이터는 브라우저에 자동 저장됩니다.</p>
+    <p>데이터는 브라우저에 자동 저장됩니다. Excel 업로드/다운로드는 .xlsx 형식을 지원합니다.</p>
   </footer>
 
   <div id="toast" class="toast" hidden></div>
 
-  <script src="js/form1.js"></script>
-  <script src="js/form2.js"></script>
-  <script src="js/form3.js"></script>
-  <script src="js/formAttach.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/master.js"></script>
+  <script src="js/form6-data.js"></script>
+  <script src="js/excel.js"></script>
+  <script src="js/form-grade.js"></script>
   <script src="js/form4.js"></script>
   <script src="js/form5.js"></script>
-  <script src="js/form6-data.js"></script>
   <script src="js/form6.js"></script>
   <script src="js/app.js"></script>
 </body>
