@@ -33,12 +33,8 @@ const CloudSync = (() => {
       }
       const health = await res.json();
       if (!health.env?.firebase) {
-        setStatus(
-          local
-            ? '클라우드: FIREBASE_SERVICE_ACCOUNT 필요 (Vercel 환경변수 또는 firebase-service-account.json)'
-            : '클라우드: Vercel에 FIREBASE_SERVICE_ACCOUNT 추가 후 재배포',
-          false
-        );
+        const hint = health.env?.firebaseHint || 'FIREBASE_SERVICE_ACCOUNT 확인';
+        setStatus(`클라우드: ${hint}`, false);
         return;
       }
       const ok = await CloudStore.init();
