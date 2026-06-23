@@ -5,27 +5,13 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { loadEnv } = require('../lib/load-env');
 
 const ROOT = path.join(__dirname, '..');
 const PORT = process.env.PORT || 8080;
 
-function loadEnv() {
-  ['.env', '.env.local'].forEach((file) => {
-    const p = path.join(ROOT, file);
-    if (!fs.existsSync(p)) return;
-    fs.readFileSync(p, 'utf8')
-      .split('\n')
-      .forEach((line) => {
-        const m = line.match(/^([^#=]+)=(.*)$/);
-        if (!m) return;
-        const key = m[1].trim();
-        let val = m[2].trim();
-        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-          val = val.slice(1, -1);
-        }
-        if (!process.env[key]) process.env[key] = val;
-      });
-  });
+function loadEnvFiles() {
+  loadEnv();
 }
 
 const MIME = {
@@ -111,7 +97,7 @@ function serveStatic(req, res, pathname) {
   fs.createReadStream(filePath).pipe(res);
 }
 
-loadEnv();
+loadEnvFiles();
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);

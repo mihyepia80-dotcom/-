@@ -11,19 +11,47 @@ const CloudSync = (() => {
   }
 
   async function init() {
+    const local = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
     if (!CloudStore.isConfigured()) {
-      setStatus('클라우드: 미연결 (.env 설정 필요)', false);
+      setStatus(
+        local
+          ? '클라우드: 미연결 (Vercel 환경변수 또는 .env.local → node scripts/generate-env.js)'
+          : '클라우드: 미연결 (Vercel FIREBASE_* 환경변수 설정 후 재배포)',
+        false
+      );
       return;
     }
     try {
+      const res = await fetch('/api/health');
+      if (!res.ok) {
+        setStatus(
+          local ? '클라우드: API 없음 — node scripts/dev-server.js 로 실행' : '클라우드: API 오류 — Vercel 재배포 확인',
+          false
+        );
+        return;
+      }
+      const health = await res.json();
+      if (!health.env?.firebase) {
+        setStatus(
+          local
+            ? '클라우드: FIREBASE_SERVICE_ACCOUNT 필요 (Vercel 환경변수 또는 firebase-service-account.json)'
+            : '클라우드: Vercel에 FIREBASE_SERVICE_ACCOUNT 추가 후 재배포',
+          false
+        );
+        return;
+      }
       const ok = await CloudStore.init();
       if (!ok) {
-        setStatus('클라우드: 서버 미연결 (npm run dev · FIREBASE_SERVICE_ACCOUNT 확인)', false);
+        setStatus('클라우드: 서버 연결 실패', false);
         return;
       }
       setStatus('클라우드: 연결됨 · 저장 시 관리자 확인 가능');
-    } catch (e) {
-      setStatus(`클라우드: 오류 (${e.message})`, false);
+    } catch {
+      setStatus(
+        local ? '클라우드: API 없음 — node scripts/dev-server.js 로 실행' : '클라우드: Vercel API 연결 실패',
+        false
+      );
     }
   }
 

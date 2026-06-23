@@ -9,6 +9,7 @@
     "dev": "node scripts/generate-env.js && node scripts/dev-server.js",
     "start": "node scripts/generate-env.js && node scripts/dev-server.js",
     "check-env": "node scripts/check-env.js",
+    "check-cloud": "node scripts/check-cloud.js",
     "admin-key": "node scripts/generate-admin-key.js",
     "firebase:deploy": "firebase deploy --only firestore"
   },

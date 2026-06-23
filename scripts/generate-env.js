@@ -3,13 +3,9 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { loadEnv } = require('../lib/load-env');
 
-try {
-  require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
-  require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') });
-} catch {
-  /* dotenv optional when env vars already injected (Vercel) */
-}
+loadEnv();
 
 const KEYS = [
   'FIREBASE_API_KEY',
@@ -24,11 +20,12 @@ const KEYS = [
 
 const env = {};
 KEYS.forEach((key) => {
-  if (process.env[key]) env[key] = process.env[key];
+  const val = process.env[key]?.trim();
+  if (val) env[key] = val;
 });
 
 const outPath = path.join(__dirname, '..', 'js', 'env.js');
-const body = `/* 자동 생성 — npm run build | .env 값은 Git에 포함되지 않음 */
+const body = `/* 자동 생성 — Vercel 빌드 또는 node scripts/generate-env.js */
 window.__ENV__ = ${JSON.stringify(env, null, 2)};
 `;
 
@@ -36,4 +33,4 @@ fs.mkdirSync(path.dirname(outPath), { recursive: true });
 fs.writeFileSync(outPath, body, 'utf8');
 
 const configured = Boolean(env.FIREBASE_PROJECT_ID && env.FIREBASE_API_KEY);
-console.log(configured ? '✓ js/env.js 생성 (Firebase 설정됨)' : '⚠ js/env.js 생성 (Firebase 미설정 — .env.example 참고)');
+console.log(configured ? '✓ js/env.js 생성 (Firebase 설정됨)' : '⚠ js/env.js 생성 (Vercel FIREBASE_* 또는 .env.local 확인)');
