@@ -53,7 +53,7 @@ const Form6 = (() => {
           <button type="button" class="btn btn-outline" onclick="Form6.clearViewer()">전체 보기</button>
           <button type="button" class="btn btn-outline" onclick="Form6.exportExcel()">Excel 다운</button>
           <button type="button" class="btn btn-outline" onclick="window.print()">인쇄</button>
-          ${typeof CloudSync !== 'undefined' ? CloudSync.buttonHtml('클라우드 제출', 'CloudSync.submitForm6()') : ''}
+          ${typeof CloudSync !== 'undefined' ? CloudSync.loadBtnHtml('CloudSync.loadForm6()') : ''}
         </div>
       </div>
       <div id="f6-departments" class="dept-list"></div>
@@ -272,14 +272,35 @@ const Form6 = (() => {
     });
   }
 
-  function saveRow(key) {
+  function applyCloudData(data) {
+    if (!data?.store) return;
+    store = {
+      rowData: data.store.rowData || {},
+      customRows: data.store.customRows || {},
+    };
+    if (data.viewerName) {
+      viewerName = data.viewerName;
+      const nameInput = document.getElementById('f6-viewer-name');
+      if (nameInput) nameInput.value = viewerName;
+    }
+    if (data.deptId && DEPARTMENTS.some((d) => d.id === data.deptId)) {
+      activeDeptId = data.deptId;
+    }
+    persistStore();
+    renderDepts();
+    switchDept(activeDeptId);
+    applyPersonFilter();
+  }
+
+  async function saveRow(key) {
     syncFromDOM();
     const state = store.rowData[key];
     if (state) state.updatedAt = new Date().toLocaleString('ko-KR');
     persistStore();
     renderDepts();
     switchDept(activeDeptId);
-    showToast('저장되었습니다.');
+    const synced = await CloudSync.syncForm6();
+    showToast(`저장되었습니다.${synced ? ' (관리자 확인 가능)' : ''}`);
   }
 
   function resetRow(key) {
@@ -473,5 +494,6 @@ const Form6 = (() => {
     persistStore,
     getStore: () => store,
     getActiveDeptId: () => activeDeptId,
+    applyCloudData,
   };
 })();

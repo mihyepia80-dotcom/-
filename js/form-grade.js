@@ -54,7 +54,7 @@ const FormGrade = (() => {
           <div class="form-actions">
             <button type="button" class="btn btn-outline" onclick="FormGrade.exportExcel('${g.prefix}')">Excel</button>
             <button type="button" class="btn btn-outline" onclick="window.print()">인쇄</button>
-            ${typeof CloudSync !== 'undefined' ? CloudSync.buttonHtml('클라우드 제출', `CloudSync.submitFormGrade('${g.prefix}')`) : ''}
+            ${typeof CloudSync !== 'undefined' ? CloudSync.loadBtnHtml(`CloudSync.loadGrade('${g.prefix}')`) : ''}
           </div>
         </div>
         <div class="meta-fields no-print">
@@ -241,22 +241,26 @@ const FormGrade = (() => {
     return data;
   }
 
-  function save(prefix) {
+  function persistLocal(prefix) {
     writeStored(prefix, { mainRows: getMainRows(prefix), attachRows: getAttachRows(prefix) });
-    const cfg = getGradeConfig(prefix);
-    showToast(`${cfg.label} 협의록이 저장되었습니다.`);
   }
 
-  function saveMain(prefix) {
-    writeStored(prefix, { mainRows: getMainRows(prefix) });
-    const cfg = getGradeConfig(prefix);
-    showToast(`${cfg.label} 교육활동 평가가 저장되었습니다.`);
+  function save(prefix) {
+    persistLocal(prefix);
   }
 
-  function saveAttach(prefix) {
-    writeStored(prefix, { attachRows: getAttachRows(prefix) });
+  async function saveMain(prefix) {
+    const data = writeStored(prefix, { mainRows: getMainRows(prefix) });
     const cfg = getGradeConfig(prefix);
-    showToast(`${cfg.label} 첨부 양식이 저장되었습니다.`);
+    const synced = await CloudSync.syncGrade(prefix, data);
+    showToast(`${cfg.label} 교육활동 평가가 저장되었습니다.${synced ? ' (관리자 확인 가능)' : ''}`);
+  }
+
+  async function saveAttach(prefix) {
+    const data = writeStored(prefix, { attachRows: getAttachRows(prefix) });
+    const cfg = getGradeConfig(prefix);
+    const synced = await CloudSync.syncGrade(prefix, data);
+    showToast(`${cfg.label} 첨부 양식이 저장되었습니다.${synced ? ' (관리자 확인 가능)' : ''}`);
   }
 
   function load(prefix) {
@@ -280,11 +284,11 @@ const FormGrade = (() => {
   }
 
   function bindEvents(prefix) {
-    document.getElementById(`${prefix}-date`).addEventListener('change', () => save(prefix));
-    document.getElementById(`${prefix}-attendees`).addEventListener('input', debounce(() => save(prefix), 800));
-    document.getElementById(`${prefix}-main-body`).addEventListener('input', debounce(() => save(prefix), 800));
-    document.getElementById(`${prefix}-main-body`).addEventListener('change', debounce(() => save(prefix), 800));
-    document.getElementById(`${prefix}-attach-body`).addEventListener('input', debounce(() => save(prefix), 800));
+    document.getElementById(`${prefix}-date`).addEventListener('change', () => persistLocal(prefix));
+    document.getElementById(`${prefix}-attendees`).addEventListener('input', debounce(() => persistLocal(prefix), 800));
+    document.getElementById(`${prefix}-main-body`).addEventListener('input', debounce(() => persistLocal(prefix), 800));
+    document.getElementById(`${prefix}-main-body`).addEventListener('change', debounce(() => persistLocal(prefix), 800));
+    document.getElementById(`${prefix}-attach-body`).addEventListener('input', debounce(() => persistLocal(prefix), 800));
   }
 
   function addMainRow(prefix) {
@@ -418,6 +422,7 @@ const FormGrade = (() => {
     resetMain,
     resetAttach,
     exportExcel,
+    load,
     getConfig: getGradeConfig,
     storageKey,
   };

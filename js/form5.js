@@ -94,7 +94,7 @@ const Form5 = (() => {
       <div class="form-actions sheet-actions no-print">
         <button type="button" class="btn btn-outline" onclick="Form5.downloadExcel()">Excel 다운</button>
         <button type="button" class="btn btn-outline" onclick="Form5.uploadExcel()">Excel 업로드</button>
-        ${typeof CloudSync !== 'undefined' ? CloudSync.buttonHtml('클라우드 제출 (내 평가)', 'CloudSync.submitEventEval()') : ''}
+        ${typeof CloudSync !== 'undefined' ? CloudSync.loadBtnHtml('CloudSync.loadForm5All()') : ''}
       </div>
       ${tableToolbar('1학기', '1학기 (3월 ~ 7월)')}
       <div class="table-wrap master-sheet-wrap">
@@ -151,14 +151,31 @@ const Form5 = (() => {
     });
   }
 
+  function applyCloudRows(semester, data) {
+    if (!data?.rows?.length) return;
+    mergeSemesterRows(semester, data.rows);
+    const all = MasterSheet.getData();
+    renderRows(all.rows);
+    if (data.writer) document.getElementById('f5-writer').value = data.writer;
+    if (data.date) document.getElementById('f5-date').value = data.date;
+    document.dispatchEvent(new CustomEvent('master-updated'));
+  }
+
   function addRow(semester = '1학기') {
     const row = MasterSheet.emptyRow(semester === '2학기' ? '8월' : '3월', semester);
     document.getElementById(bodyId(semester)).appendChild(createRow(row, semester));
   }
 
-  function saveTable(semester) {
-    mergeSemesterRows(semester, readBody(bodyId(semester), semester));
-    showToast(`${semester} 행사 마스터가 저장되었습니다.`);
+  async function saveTable(semester) {
+    const rows = readBody(bodyId(semester), semester);
+    mergeSemesterRows(semester, rows);
+    const meta = {
+      personName: document.getElementById('f5-person-filter')?.value?.trim() || document.getElementById('f5-writer')?.value?.trim() || '',
+      writer: document.getElementById('f5-writer')?.value?.trim() || '',
+      date: document.getElementById('f5-date')?.value || '',
+    };
+    const synced = await CloudSync.syncForm5(semester, rows, meta);
+    showToast(`${semester} 행사 마스터가 저장되었습니다.${synced ? ' (관리자 확인 가능)' : ''}`);
     document.dispatchEvent(new CustomEvent('master-updated'));
   }
 
@@ -215,5 +232,5 @@ const Form5 = (() => {
     load();
   }
 
-  return { init, addRow, saveTable, resetTable, deleteRow, downloadExcel, uploadExcel, load };
+  return { init, addRow, saveTable, resetTable, deleteRow, downloadExcel, uploadExcel, load, applyCloudRows };
 })();

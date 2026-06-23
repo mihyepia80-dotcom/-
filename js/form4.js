@@ -83,7 +83,7 @@ const Form4 = (() => {
           <div class="form-actions">
             <button type="button" class="btn btn-outline" onclick="Form4.exportExcel()">Excel</button>
             <button type="button" class="btn btn-outline" onclick="window.print()">인쇄</button>
-            ${typeof CloudSync !== 'undefined' ? CloudSync.buttonHtml('클라우드 제출', 'CloudSync.submitForm4()') : ''}
+            ${typeof CloudSync !== 'undefined' ? CloudSync.loadBtnHtml('CloudSync.loadForm4()') : ''}
             ${tabs.length > 1 ? `<button type="button" class="btn btn-danger no-print" onclick="Form4.removeTab('${tab.id}')">탭 삭제</button>` : ''}
           </div>
         </div>
@@ -291,24 +291,36 @@ const Form4 = (() => {
     showToast(`「${tab?.name || '평가'}」이 저장되었습니다.`);
   }
 
-  function saveMainTable() {
+  async function saveMainTable() {
     const panel = getActivePanel();
     if (!panel) return;
     syncActiveTabFromDOM();
     const tab = getActiveTab();
     if (tab) tab.mainRows = readPanelData(panel).mainRows;
     persist();
-    showToast(`「${tab?.name}」 평가 표가 저장되었습니다.`);
+    const synced = tab ? await CloudSync.syncForm4(tab) : false;
+    showToast(`「${tab?.name}」 평가 표가 저장되었습니다.${synced ? ' (관리자 확인 가능)' : ''}`);
   }
 
-  function saveAttachTable() {
+  async function saveAttachTable() {
     const panel = getActivePanel();
     if (!panel) return;
     syncActiveTabFromDOM();
     const tab = getActiveTab();
     if (tab) tab.attachRows = readPanelData(panel).attachRows;
     persist();
-    showToast(`「${tab?.name}」 첨부 표가 저장되었습니다.`);
+    const synced = tab ? await CloudSync.syncForm4(tab) : false;
+    showToast(`「${tab?.name}」 첨부 표가 저장되었습니다.${synced ? ' (관리자 확인 가능)' : ''}`);
+  }
+
+  function replaceTabData(tabId, data) {
+    const idx = tabs.findIndex((t) => t.id === tabId);
+    if (idx < 0) return false;
+    tabs[idx] = { ...tabs[idx], ...data, id: tabId };
+    const panel = document.getElementById(`panel-${tabId}`);
+    if (panel) fillPanel(panel, tabs[idx]);
+    persist();
+    return idx;
   }
 
   function resetMainTable() {
@@ -505,5 +517,6 @@ const Form4 = (() => {
     resetAttachTable,
     exportExcel,
     getActiveTab,
+    replaceTabData,
   };
 })();

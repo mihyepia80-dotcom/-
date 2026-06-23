@@ -15,12 +15,11 @@
   <div id="admin-gate" class="admin-gate">
     <div class="admin-gate-card">
       <h1>관리자 대시보드</h1>
-      <p class="gate-desc">관리자 암호와 Google 계정으로 로그인하세요.<br>입력 화면(<a href="index.html">메인</a>)은 누구나 접근 가능합니다.</p>
+      <p class="gate-desc">관리자 암호로 로그인하세요.<br>입력 화면(<a href="index.html">메인</a>)은 누구나 접근 가능합니다.</p>
       <label class="gate-label">관리자 암호
         <input type="password" id="admin-password" placeholder="관리자 암호" autocomplete="current-password" />
       </label>
-      <button type="button" class="btn btn-secondary btn-block" id="admin-pw-btn">암호 확인</button>
-      <button type="button" class="btn btn-primary btn-block" id="admin-google-btn" disabled>Google 로그인</button>
+      <button type="button" class="btn btn-primary btn-block" id="admin-pw-btn">로그인</button>
       <p id="gate-msg" class="gate-msg"></p>
       <a href="index.html" class="gate-link">← 입력 화면으로</a>
     </div>
@@ -55,6 +54,7 @@
         <div class="admin-subnav">
           <button type="button" class="btn btn-outline btn-sm active" data-stype="form-grade" onclick="AdminDashboard.showAggregate('form-grade')">학년 협의록</button>
           <button type="button" class="btn btn-outline btn-sm" data-stype="form4" onclick="AdminDashboard.showAggregate('form4')">교과/비교과</button>
+          <button type="button" class="btn btn-outline btn-sm" data-stype="form5" onclick="AdminDashboard.showAggregate('form5')">행사 마스터</button>
           <button type="button" class="btn btn-outline btn-sm" data-stype="form6" onclick="AdminDashboard.showAggregate('form6')">부서 협의록</button>
         </div>
         <div id="aggregate-list" class="aggregate-list"></div>
@@ -123,9 +123,6 @@
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script>window.__ENV__ = window.__ENV__ || {};</script>
   <script src="js/env.js" onerror="window.__ENV__=window.__ENV__||{}"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/master.js"></script>
   <script src="js/master-view.js"></script>

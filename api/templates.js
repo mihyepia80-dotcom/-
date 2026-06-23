@@ -5,7 +5,6 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {
-    checkAdminKey(req);
     const db = getFirebaseAdmin().firestore();
     const ref = db.collection(`${collectionPrefix()}_config`).doc('live');
 
@@ -15,6 +14,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
+      checkAdminKey(req);
       const body = await readBody(req);
       const template = body.template;
       if (!template) return res.status(400).json({ error: 'template required' });

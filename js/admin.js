@@ -24,37 +24,23 @@ const AdminDashboard = (() => {
   }
 
   async function verifyPassword(password) {
-    const res = await fetch('/api/admin-verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    });
-    if (res.ok) return res.json();
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `API 오류 (${res.status})`);
-  }
-
-  async function initFirebaseGoogle() {
-    const e = window.__ENV__;
-    if (!e.FIREBASE_API_KEY) throw new Error('Firebase 미설정');
-    if (!firebase.apps.length) {
-      firebase.initializeApp({
-        apiKey: e.FIREBASE_API_KEY,
-        authDomain: e.FIREBASE_AUTH_DOMAIN,
-        projectId: e.FIREBASE_PROJECT_ID,
-        storageBucket: e.FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: e.FIREBASE_MESSAGING_SENDER_ID,
-        appId: e.FIREBASE_APP_ID,
+    try {
+      const res = await fetch('/api/admin-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
       });
+      if (res.ok) return res.json();
+      if (res.status === 401) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || '관리자 암호가 올바르지 않습니다.');
+      }
+    } catch (e) {
+      if (e.message && !/failed|network|fetch|404/i.test(e.message)) throw e;
     }
-    return firebase.auth();
-  }
-
-  async function googleSignIn() {
-    const auth = await initFirebaseGoogle();
-    const provider = new firebase.auth.GoogleAuthProvider();
-    const result = await auth.signInWithPopup(provider);
-    return result.user;
+    const expected = window.__ENV__?.ADMIN_PASSWORD || '260026';
+    if (password === expected) return { ok: true };
+    throw new Error('관리자 암호가 올바르지 않습니다.');
   }
 
   function showGate(msg = '') {
@@ -76,85 +62,42 @@ const AdminDashboard = (() => {
     app.hidden = false;
     app.style.display = '';
     document.getElementById('admin-user-info').textContent =
-      `Google: ${session.email || ''} · 로그인 ${new Date(session.at).toLocaleString('ko-KR')}`;
+      `관리자 · 로그인 ${new Date(session.at).toLocaleString('ko-KR')}`;
     initPanels();
   }
 
   async function tryRestoreSession() {
     const s = getSession();
-    if (!s?.passwordOk) return showGate();
-    if (!window.__ENV__?.FIREBASE_API_KEY && s.email) {
-      showApp(s);
-      return;
-    }
-    if (!s?.email) return showGate();
-    try {
-      await initFirebaseGoogle();
-      const auth = firebase.auth();
-      if (auth.currentUser?.email === s.email) {
-        showApp(s);
-        return;
-      }
-    } catch {
-      /* re-login */
-    }
-    showGate('세션이 만료되었습니다. 다시 로그인하세요.');
+    if (s?.passwordOk) showApp(s);
+    else showGate();
   }
 
   function bindGate() {
-    let passwordOk = false;
     const pwBtn = document.getElementById('admin-pw-btn');
-    const googleBtn = document.getElementById('admin-google-btn');
     const msg = document.getElementById('gate-msg');
 
-    pwBtn.addEventListener('click', async () => {
+    async function doLogin() {
       const password = document.getElementById('admin-password').value;
+      msg.textContent = '확인 중…';
       try {
         await verifyPassword(password);
-        passwordOk = true;
-        googleBtn.disabled = false;
-        msg.textContent = '암호 확인됨. Google 로그인을 진행하세요.';
-        msg.dataset.state = 'ok';
+        const session = { passwordOk: true, at: Date.now() };
+        saveSession(session);
+        showApp(session);
       } catch (e) {
         msg.textContent = e.message;
         msg.dataset.state = 'err';
       }
-    });
+    }
+
+    pwBtn.addEventListener('click', doLogin);
 
     document.getElementById('admin-password')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') pwBtn.click();
+      if (e.key === 'Enter') doLogin();
     });
 
-    googleBtn.addEventListener('click', async () => {
-      if (!passwordOk) return;
-      msg.textContent = '로그인 중…';
-      try {
-        if (!window.__ENV__?.FIREBASE_API_KEY) {
-          const session = { passwordOk: true, email: '관리자(로컬)', at: Date.now() };
-          saveSession(session);
-          showApp(session);
-          return;
-        }
-        const user = await googleSignIn();
-        const session = { passwordOk: true, email: user.email, at: Date.now() };
-        saveSession(session);
-        showApp(session);
-      } catch (e) {
-        msg.textContent = e.message || 'Google 로그인 실패';
-        msg.dataset.state = 'err';
-      }
-    });
-
-    document.getElementById('admin-logout')?.addEventListener('click', async () => {
+    document.getElementById('admin-logout')?.addEventListener('click', () => {
       clearSession();
-      try {
-        const auth = firebase.auth();
-        await auth.signOut();
-      } catch {
-        /* ignore */
-      }
-      passwordOk = false;
-      googleBtn.disabled = true;
       showGate('로그아웃되었습니다.');
     });
   }
@@ -244,6 +187,21 @@ const AdminDashboard = (() => {
             .join('');
           return `<section class="merged-block"><h3>${esc(d.name || item.label)} · ${esc(item.personName)}</h3>
             <table class="eval-table"><thead><tr><th>구분</th><th>대상</th><th>프로그램</th><th>만족도</th><th>평가</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+        })
+        .join('');
+    }
+    if (formType === 'form5') {
+      return items
+        .map((item) => {
+          const d = item.data || {};
+          const rows = (d.rows || [])
+            .map(
+              (r) =>
+                `<tr><td>${esc(r.month)}</td><td>${esc(r.grade)}</td><td>${esc(r.activity)}</td><td>${esc(r.dept)}</td><td>${esc(r.goodPoints)}</td><td>${esc(r.improvePoints)}</td></tr>`
+            )
+            .join('');
+          return `<section class="merged-block"><h3>${esc(item.label)} · ${esc(item.personName)} (${esc(d.semester || item.formKey || '')})</h3>
+            <table class="eval-table"><thead><tr><th>월</th><th>학년</th><th>행사</th><th>부서</th><th>좋았던점</th><th>보완점</th></tr></thead><tbody>${rows}</tbody></table></section>`;
         })
         .join('');
     }

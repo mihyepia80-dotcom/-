@@ -43,6 +43,7 @@ const API_MAP = {
   '/api/master': 'master.js',
   '/api/templates': 'templates.js',
   '/api/gemini': 'gemini.js',
+  '/api/submissions': 'submissions.js',
 };
 
 function createMockRes(serverRes) {

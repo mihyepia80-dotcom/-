@@ -48,13 +48,17 @@ const TemplateStore = (() => {
 
   async function fetchFromCloud() {
     if (!CloudStore.isConfigured()) return getLive();
-    await CloudStore.init();
-    const db = firebase.firestore();
-    const prefix = (window.__ENV__?.FIREBASE_COLLECTION_PREFIX || 'midterm2026');
-    const doc = await db.collection(`${prefix}_config`).doc('live').get();
-    if (doc.exists) {
-      setLive(doc.data());
-      return doc.data();
+    try {
+      const res = await fetch('/api/templates');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.template) {
+          setLive(data.template);
+          return data.template;
+        }
+      }
+    } catch {
+      /* 로컬 기본값 사용 */
     }
     return getLive();
   }
