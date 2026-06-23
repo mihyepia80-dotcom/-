@@ -63,6 +63,25 @@ body {
   opacity: 0.75;
 }
 
+.header-admin-link {
+  margin-top: 0.5rem;
+}
+
+.admin-link-btn {
+  display: inline-block;
+  padding: 0.35rem 0.85rem;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.admin-link-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 .cloud-panel {
   margin-top: 1.5rem;
   padding: 1rem;

@@ -16,14 +16,17 @@
 
 ```bash
 cp .env.example .env
-# .env에 Firebase 값 입력
+# .env / .env.local 에 Firebase·ADMIN_SYNC_KEY·GEMINI_API_KEY 등 입력
 
 npm install
-npm run build    # js/env.js 생성 (.gitignore)
-npm run dev      # http://localhost:8080
+npm run build    # js/env.js 생성
+npm run dev      # http://localhost:8080 — API 포함 개발 서버
 ```
 
-`index.html`만 열어도 동작하지만, Firebase 연동은 `npm run build` 후에 가능합니다.
+> **주의:** `index.html`을 더블클릭(file://)하거나 정적 서버(`serve`)만 쓰면 **API(/api/*)가 동작하지 않습니다.**  
+> 반드시 `npm run dev` 또는 **Vercel 배포 URL**을 사용하세요.
+
+API 확인: `http://localhost:8080/api/health`
 
 ## Firebase · Vercel 배포
 

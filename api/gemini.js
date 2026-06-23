@@ -1,22 +1,16 @@
-/**
- * Gemini API — 담당자 제출물 분석 (키는 Vercel 환경변수 GEMINI_API_KEY)
- */
+const { setCors, readBody, checkAdminKey } = require('../lib/api-utils');
+
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Key');
+  setCors(res);
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const adminKey = req.headers['x-admin-key'];
-  if (!adminKey || adminKey !== process.env.ADMIN_SYNC_KEY) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
-
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    checkAdminKey(req);
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+
+    const body = await readBody(req);
     const { prompt, submissions, formType } = body;
 
     const dataText = JSON.stringify(submissions || [], null, 2).slice(0, 80000);
@@ -34,11 +28,7 @@ module.exports = async (req, res) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: `${systemPrompt}\n\n--- 데이터 ---\n${dataText}` }],
-            },
-          ],
+          contents: [{ parts: [{ text: `${systemPrompt}\n\n--- 데이터 ---\n${dataText}` }] }],
         }),
       }
     );
@@ -54,6 +44,6 @@ module.exports = async (req, res) => {
 
     return res.status(200).json({ analysis: text });
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return res.status(e.status || 500).json({ error: e.message || 'Server error' });
   }
 };

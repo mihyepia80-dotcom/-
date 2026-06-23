@@ -29,11 +29,9 @@ const AdminDashboard = (() => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || '암호 오류');
-    }
-    return res.json();
+    if (res.ok) return res.json();
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `API 오류 (${res.status})`);
   }
 
   async function initFirebaseGoogle() {
@@ -60,14 +58,23 @@ const AdminDashboard = (() => {
   }
 
   function showGate(msg = '') {
-    document.getElementById('admin-gate').hidden = false;
-    document.getElementById('admin-app').hidden = true;
-    document.getElementById('gate-msg').textContent = msg;
+    const gate = document.getElementById('admin-gate');
+    const app = document.getElementById('admin-app');
+    gate.hidden = false;
+    gate.style.display = '';
+    app.hidden = true;
+    app.style.display = 'none';
+    const msgEl = document.getElementById('gate-msg');
+    if (msgEl) msgEl.textContent = msg;
   }
 
   function showApp(session) {
-    document.getElementById('admin-gate').hidden = true;
-    document.getElementById('admin-app').hidden = false;
+    const gate = document.getElementById('admin-gate');
+    const app = document.getElementById('admin-app');
+    gate.hidden = true;
+    gate.style.display = 'none';
+    app.hidden = false;
+    app.style.display = '';
     document.getElementById('admin-user-info').textContent =
       `Google: ${session.email || ''} · 로그인 ${new Date(session.at).toLocaleString('ko-KR')}`;
     initPanels();
@@ -75,7 +82,12 @@ const AdminDashboard = (() => {
 
   async function tryRestoreSession() {
     const s = getSession();
-    if (!s?.passwordOk || !s?.email) return showGate();
+    if (!s?.passwordOk) return showGate();
+    if (!window.__ENV__?.FIREBASE_API_KEY && s.email) {
+      showApp(s);
+      return;
+    }
+    if (!s?.email) return showGate();
     try {
       await initFirebaseGoogle();
       const auth = firebase.auth();
@@ -109,16 +121,27 @@ const AdminDashboard = (() => {
       }
     });
 
+    document.getElementById('admin-password')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') pwBtn.click();
+    });
+
     googleBtn.addEventListener('click', async () => {
       if (!passwordOk) return;
-      msg.textContent = 'Google 로그인 중…';
+      msg.textContent = '로그인 중…';
       try {
+        if (!window.__ENV__?.FIREBASE_API_KEY) {
+          const session = { passwordOk: true, email: '관리자(로컬)', at: Date.now() };
+          saveSession(session);
+          showApp(session);
+          return;
+        }
         const user = await googleSignIn();
         const session = { passwordOk: true, email: user.email, at: Date.now() };
         saveSession(session);
         showApp(session);
       } catch (e) {
         msg.textContent = e.message || 'Google 로그인 실패';
+        msg.dataset.state = 'err';
       }
     });
 
@@ -376,14 +399,22 @@ const AdminDashboard = (() => {
   }
 
   function initPanels() {
-    initEventFilters();
-    renderTemplateEditor();
-    loadTemplate();
-    loadSubmissions();
-    searchEvents();
+    try {
+      initEventFilters();
+      renderTemplateEditor();
+      loadTemplate();
+      if (CloudStore.isConfigured()) {
+        loadSubmissions().catch(() => {});
+      }
+      searchEvents();
+    } catch (e) {
+      console.error(e);
+      showToast('일부 기능을 불러오지 못했습니다.');
+    }
   }
 
   function init() {
+    showGate();
     bindGate();
     bindNav();
     tryRestoreSession();
