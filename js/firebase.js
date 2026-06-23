@@ -1,6 +1,10 @@
 const CloudStore = (() => {
   let ready = false;
   let initPromise = null;
+  let mode = null;
+  let lastError = '';
+  let db = null;
+  let auth = null;
   let prefix = 'midterm2026';
 
   function env() {
@@ -16,6 +20,14 @@ const CloudStore = (() => {
     return env().ADMIN_SYNC_KEY || '';
   }
 
+  function getMode() {
+    return mode;
+  }
+
+  function getLastError() {
+    return lastError;
+  }
+
   function collection(name) {
     return `${prefix}_${name}`;
   }
@@ -28,29 +40,70 @@ const CloudStore = (() => {
       .slice(0, 48) || 'anonymous';
   }
 
+  function initFirebaseApp() {
+    const e = env();
+    if (!firebase.apps.length) {
+      firebase.initializeApp({
+        apiKey: e.FIREBASE_API_KEY,
+        authDomain: e.FIREBASE_AUTH_DOMAIN,
+        projectId: e.FIREBASE_PROJECT_ID,
+        storageBucket: e.FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: e.FIREBASE_MESSAGING_SENDER_ID,
+        appId: e.FIREBASE_APP_ID,
+      });
+    }
+    auth = firebase.auth();
+    db = firebase.firestore();
+  }
+
+  async function initClient() {
+    if (typeof firebase === 'undefined') {
+      throw new Error('Firebase SDK 미로드');
+    }
+    initFirebaseApp();
+    if (!auth.currentUser) {
+      await auth.signInAnonymously();
+    }
+    mode = 'client';
+    ready = true;
+    return true;
+  }
+
+  async function initApi() {
+    const res = await fetch('/api/health');
+    if (!res.ok) return false;
+    const health = await res.json();
+    if (!health.env?.firebase) return false;
+    mode = 'api';
+    ready = true;
+    return true;
+  }
+
   async function init() {
     if (initPromise) return initPromise;
     initPromise = (async () => {
+      lastError = '';
+      ready = false;
+      mode = null;
       if (!isConfigured()) {
-        ready = false;
+        lastError = 'Firebase 웹 설정 없음';
         return false;
       }
       prefix = env().FIREBASE_COLLECTION_PREFIX || 'midterm2026';
       try {
-        const res = await fetch('/api/health');
-        if (!res.ok) {
-          ready = false;
-          return false;
-        }
-        const health = await res.json();
-        if (!health.env?.firebase) {
-          ready = false;
-          return false;
-        }
-        ready = true;
-        return true;
+        if (await initApi()) return true;
       } catch {
+        /* API fallback */
+      }
+      try {
+        return await initClient();
+      } catch (e) {
+        lastError = e.message || String(e);
+        if (/admin-restricted|operation-not-allowed/i.test(lastError)) {
+          lastError = 'Firebase Console → Authentication → 익명 로그인 활성화 필요';
+        }
         ready = false;
+        mode = null;
         return false;
       }
     })();
@@ -59,9 +112,7 @@ const CloudStore = (() => {
 
   function assertReady() {
     if (!ready) {
-      throw new Error(
-        '클라우드 서버에 연결할 수 없습니다. npm run dev 로 실행하고 FIREBASE_SERVICE_ACCOUNT를 설정하세요.'
-      );
+      throw new Error(lastError || '클라우드에 연결되지 않았습니다.');
     }
   }
 
@@ -70,35 +121,61 @@ const CloudStore = (() => {
     throw new Error(err.error || `요청 실패 (${res.status})`);
   }
 
-  /** 담당자 제출물 저장 (동일 formType+formKey+personName 은 덮어쓰기) */
+  function submissionPayload({ formType, formKey, personName, label, data }) {
+    const uid = mode === 'client' ? auth.currentUser.uid : 'api';
+    return {
+      formType,
+      formKey,
+      personName: personName || '',
+      label: label || `${formType} · ${personName}`,
+      data,
+      submittedBy: uid,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
   async function submit({ formType, formKey, personName, label, data }) {
     await init();
     assertReady();
-    const res = await fetch('/api/submissions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ formType, formKey, personName, label, data }),
-    });
-    if (!res.ok) await parseError(res);
-    const result = await res.json();
-    return result.id;
+    const docId = `${formType}__${formKey}__${slug(personName)}`;
+    const payload = submissionPayload({ formType, formKey, personName, label, data });
+
+    if (mode === 'api') {
+      const res = await fetch('/api/submissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formType, formKey, personName, label, data }),
+      });
+      if (!res.ok) await parseError(res);
+      const result = await res.json();
+      return result.id;
+    }
+
+    await db.collection(collection('submissions')).doc(docId).set(payload, { merge: true });
+    return docId;
   }
 
-  /** 제출물 목록 (관리자용) */
   async function listSubmissions(formType = null) {
     await init();
     assertReady();
-    const params = new URLSearchParams({ list: '1' });
-    if (formType) params.set('formType', formType);
-    const res = await fetch(`/api/submissions?${params}`, {
-      headers: { 'X-Admin-Key': adminKey() },
-    });
-    if (!res.ok) await parseError(res);
-    const data = await res.json();
-    return data.items || [];
+
+    if (mode === 'api') {
+      const params = new URLSearchParams({ list: '1' });
+      if (formType) params.set('formType', formType);
+      const res = await fetch(`/api/submissions?${params}`, {
+        headers: { 'X-Admin-Key': adminKey() },
+      });
+      if (!res.ok) await parseError(res);
+      const data = await res.json();
+      return data.items || [];
+    }
+
+    let query = db.collection(collection('submissions')).orderBy('updatedAt', 'desc');
+    if (formType) query = query.where('formType', '==', formType);
+    const snap = await query.limit(200).get();
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   }
 
-  /** 행사 평가 제출물 → 마스터 행 병합 (goodPoints / improvePoints) */
   function mergeEventEvalIntoMaster(masterData, submissions) {
     const data = JSON.parse(JSON.stringify(masterData));
     const rowMap = new Map(data.rows.map((r) => [r.id, r]));
@@ -117,47 +194,48 @@ const CloudStore = (() => {
     return data;
   }
 
-  /** 마스터 시트 API 경유 저장 (ADMIN_SYNC_KEY 필요) */
   async function saveMasterViaApi(masterData) {
     const key = adminKey();
     if (!key) throw new Error('ADMIN_SYNC_KEY가 설정되지 않았습니다.');
     const res = await fetch('/api/master', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Admin-Key': key,
-      },
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': key },
       body: JSON.stringify({ master: masterData }),
     });
     if (!res.ok) await parseError(res);
     return res.json();
   }
 
-  /** 마스터 시트 API 경유 불러오기 */
   async function loadMasterViaApi() {
     const key = adminKey();
     if (!key) throw new Error('ADMIN_SYNC_KEY가 설정되지 않았습니다.');
-    const res = await fetch('/api/master', {
-      headers: { 'X-Admin-Key': key },
-    });
+    const res = await fetch('/api/master', { headers: { 'X-Admin-Key': key } });
     if (!res.ok) await parseError(res);
     return res.json();
   }
 
-  /** 제출물 1건 조회 (작성자 불러오기) */
   async function fetchSubmission(formType, formKey, personName) {
     await init();
     assertReady();
-    const params = new URLSearchParams({ formType, formKey, personName });
-    const res = await fetch(`/api/submissions?${params}`);
-    if (!res.ok) await parseError(res);
-    const data = await res.json();
-    return data.item || null;
+    const docId = `${formType}__${formKey}__${slug(personName)}`;
+
+    if (mode === 'api') {
+      const params = new URLSearchParams({ formType, formKey, personName });
+      const res = await fetch(`/api/submissions?${params}`);
+      if (!res.ok) await parseError(res);
+      const data = await res.json();
+      return data.item || null;
+    }
+
+    const snap = await db.collection(collection('submissions')).doc(docId).get();
+    return snap.exists ? { id: snap.id, ...snap.data() } : null;
   }
 
   return {
     init,
     isConfigured,
+    getMode,
+    getLastError,
     submit,
     fetchSubmission,
     listSubmissions,

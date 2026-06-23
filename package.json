@@ -11,6 +11,7 @@
     "check-env": "node scripts/check-env.js",
     "check-cloud": "node scripts/check-cloud.js",
     "encode-sa": "node scripts/encode-service-account.js",
+    "print-vercel-env": "node scripts/print-vercel-env.js",
     "admin-key": "node scripts/generate-admin-key.js",
     "firebase:deploy": "firebase deploy --only firestore"
   },

@@ -32,17 +32,19 @@ const CloudSync = (() => {
         return;
       }
       const health = await res.json();
-      if (!health.env?.firebase) {
-        const hint = health.env?.firebaseHint || 'FIREBASE_SERVICE_ACCOUNT 확인';
-        setStatus(`클라우드: ${hint}`, false);
-        return;
-      }
       const ok = await CloudStore.init();
-      if (!ok) {
-        setStatus('클라우드: 서버 연결 실패', false);
+      if (ok) {
+        const m = CloudStore.getMode?.();
+        setStatus(
+          m === 'client'
+            ? '클라우드: 연결됨 (Firebase 직접 · 저장 시 관리자 확인 가능)'
+            : '클라우드: 연결됨 · 저장 시 관리자 확인 가능'
+        );
         return;
       }
-      setStatus('클라우드: 연결됨 · 저장 시 관리자 확인 가능');
+      const err = CloudStore.getLastError?.();
+      const hint = err || health.env?.firebaseHint || '클라우드 설정 확인';
+      setStatus(`클라우드: ${hint}`, false);
     } catch {
       setStatus(
         local ? '클라우드: API 없음 — node scripts/dev-server.js 로 실행' : '클라우드: Vercel API 연결 실패',
