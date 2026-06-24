@@ -299,7 +299,7 @@ const Form4 = (() => {
     if (tab) tab.mainRows = readPanelData(panel).mainRows;
     persist();
     const synced = tab ? await CloudSync.syncForm4(tab) : false;
-    showToast(`「${tab?.name}」 평가 표가 저장되었습니다.${synced ? ' (관리자 확인 가능)' : ''}`);
+    showToast(`「${tab?.name}」 평가 표가 저장되었습니다.${CloudSync.cloudHint(synced)}`);
   }
 
   async function saveAttachTable() {
@@ -310,7 +310,7 @@ const Form4 = (() => {
     if (tab) tab.attachRows = readPanelData(panel).attachRows;
     persist();
     const synced = tab ? await CloudSync.syncForm4(tab) : false;
-    showToast(`「${tab?.name}」 첨부 표가 저장되었습니다.${synced ? ' (관리자 확인 가능)' : ''}`);
+    showToast(`「${tab?.name}」 첨부 표가 저장되었습니다.${CloudSync.cloudHint(synced)}`);
   }
 
   function replaceTabData(tabId, data) {

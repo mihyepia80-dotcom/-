@@ -253,14 +253,14 @@ const FormGrade = (() => {
     const data = writeStored(prefix, { mainRows: getMainRows(prefix) });
     const cfg = getGradeConfig(prefix);
     const synced = await CloudSync.syncGrade(prefix, data);
-    showToast(`${cfg.label} 교육활동 평가가 저장되었습니다.${synced ? ' (관리자 확인 가능)' : ''}`);
+    showToast(`${cfg.label} 교육활동 평가가 저장되었습니다.${CloudSync.cloudHint(synced)}`);
   }
 
   async function saveAttach(prefix) {
     const data = writeStored(prefix, { attachRows: getAttachRows(prefix) });
     const cfg = getGradeConfig(prefix);
     const synced = await CloudSync.syncGrade(prefix, data);
-    showToast(`${cfg.label} 첨부 양식이 저장되었습니다.${synced ? ' (관리자 확인 가능)' : ''}`);
+    showToast(`${cfg.label} 첨부 양식이 저장되었습니다.${CloudSync.cloudHint(synced)}`);
   }
 
   function load(prefix) {

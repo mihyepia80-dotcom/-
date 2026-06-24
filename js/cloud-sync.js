@@ -62,6 +62,12 @@ const CloudSync = (() => {
     return n;
   }
 
+  function cloudHint(synced) {
+    if (synced) return ' (관리자 확인 가능)';
+    if (!CloudStore.isConfigured()) return ' (브라우저에만 저장됨 · 클라우드 미연결)';
+    return ' (브라우저에만 저장됨 · 클라우드 동기화 실패)';
+  }
+
   /** 저장 버튼 → Firestore 동기화 (관리자 대시보드에서 확인) */
   async function syncSave({ formType, formKey, personName, label, data }) {
     if (!CloudStore.isConfigured()) return false;
@@ -230,6 +236,7 @@ const CloudSync = (() => {
   return {
     init,
     loadBtnHtml,
+    cloudHint,
     syncSave,
     loadSave,
     syncGrade,

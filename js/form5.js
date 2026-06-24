@@ -59,6 +59,13 @@ const Form5 = (() => {
     MasterSheet.save(data);
   }
 
+  function persistTable(semester) {
+    mergeSemesterRows(semester, readBody(bodyId(semester), semester));
+  }
+
+  const debouncedPersistS1 = debounce(() => persistTable('1학기'), 800);
+  const debouncedPersistS2 = debounce(() => persistTable('2학기'), 800);
+
   function renderRows(rows) {
     ['1학기', '2학기'].forEach((semester) => {
       const tbody = document.getElementById(bodyId(semester));
@@ -145,9 +152,14 @@ const Form5 = (() => {
       });
     });
     ['f5-body-s1', 'f5-body-s2'].forEach((id) => {
-      document.getElementById(id).addEventListener('input', (e) => {
+      const semester = id === 'f5-body-s2' ? '2학기' : '1학기';
+      const debounced = semester === '2학기' ? debouncedPersistS2 : debouncedPersistS1;
+      const tbody = document.getElementById(id);
+      tbody.addEventListener('input', (e) => {
+        debounced();
         if (e.target.classList.contains('dept-input')) applyPersonFilter();
       });
+      tbody.addEventListener('change', debounced);
     });
   }
 
@@ -175,7 +187,7 @@ const Form5 = (() => {
       date: document.getElementById('f5-date')?.value || '',
     };
     const synced = await CloudSync.syncForm5(semester, rows, meta);
-    showToast(`${semester} 행사 마스터가 저장되었습니다.${synced ? ' (관리자 확인 가능)' : ''}`);
+    showToast(`${semester} 행사 마스터가 저장되었습니다.${CloudSync.cloudHint(synced)}`);
     document.dispatchEvent(new CustomEvent('master-updated'));
   }
 
@@ -232,5 +244,8 @@ const Form5 = (() => {
     load();
   }
 
-  return { init, addRow, saveTable, resetTable, deleteRow, downloadExcel, uploadExcel, load, applyCloudRows };
+  return { init, addRow, saveTable, resetTable, deleteRow, downloadExcel, uploadExcel, load, applyCloudRows, persistAll: () => {
+    persistTable('1학기');
+    persistTable('2학기');
+  } };
 })();

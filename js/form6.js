@@ -245,7 +245,17 @@ const Form6 = (() => {
     container.innerHTML = '';
     DEPARTMENTS.forEach((dept) => container.appendChild(createDeptSection(dept)));
     bindCustomFieldListeners();
+    bindTaskListeners();
     applyPersonFilter();
+  }
+
+  function bindTaskListeners() {
+    document.querySelectorAll('.task-content').forEach((el) => {
+      el.addEventListener('input', debounce(() => {
+        syncFromDOM();
+        persistStore();
+      }, 800));
+    });
   }
 
   function bindCustomFieldListeners() {
@@ -257,6 +267,8 @@ const Form6 = (() => {
           nameEl.textContent = el.value.trim() || '(담당자 미지정)';
           card.dataset.person = el.value.trim();
         }
+        syncFromDOM();
+        persistStore();
       }, 300));
     });
   }
@@ -300,7 +312,7 @@ const Form6 = (() => {
     renderDepts();
     switchDept(activeDeptId);
     const synced = await CloudSync.syncForm6();
-    showToast(`저장되었습니다.${synced ? ' (관리자 확인 가능)' : ''}`);
+    showToast(`저장되었습니다.${CloudSync.cloudHint(synced)}`);
   }
 
   function resetRow(key) {
@@ -492,6 +504,7 @@ const Form6 = (() => {
     exportExcel,
     clearViewer,
     persistStore,
+    syncFromDOM,
     getStore: () => store,
     getActiveDeptId: () => activeDeptId,
     applyCloudData,

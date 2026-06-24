@@ -24,6 +24,13 @@ function initMainTabs() {
         panel.classList.toggle('active', isActive);
         panel.hidden = !isActive;
       });
+      if (target !== 'form5') {
+        Form5.persistAll?.();
+      }
+      if (target !== 'form6') {
+        Form6.syncFromDOM?.();
+        Form6.persistStore?.();
+      }
     });
   });
 }
