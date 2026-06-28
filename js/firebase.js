@@ -20,6 +20,21 @@ const CloudStore = (() => {
     return env().ADMIN_SYNC_KEY || '';
   }
 
+  async function loadClientEnv() {
+    if (isConfigured()) return;
+    if (typeof fetch !== 'function') return;
+    try {
+      const res = await fetch('/api/env', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && typeof data === 'object') {
+        window.__ENV__ = Object.assign(window.__ENV__ || {}, data);
+      }
+    } catch {
+      // ignore runtime env load failures
+    }
+  }
+
   function getMode() {
     return mode;
   }
@@ -85,6 +100,7 @@ const CloudStore = (() => {
       lastError = '';
       ready = false;
       mode = null;
+      await loadClientEnv();
       if (!isConfigured()) {
         lastError = 'Firebase 웹 설정 없음';
         return false;

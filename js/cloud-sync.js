@@ -13,15 +13,6 @@ const CloudSync = (() => {
   async function init() {
     const local = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 
-    if (!CloudStore.isConfigured()) {
-      setStatus(
-        local
-          ? '클라우드: 미연결 (Vercel 환경변수 또는 .env.local → node scripts/generate-env.js)'
-          : '클라우드: 미연결 (Vercel FIREBASE_* 환경변수 설정 후 재배포)',
-        false
-      );
-      return;
-    }
     try {
       const res = await fetch('/api/health');
       if (!res.ok) {
