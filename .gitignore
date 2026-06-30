@@ -18,3 +18,7 @@ Thumbs.db
 # Firebase Admin 서비스 계정 (서버 전용)
 firebase-service-account.json
 *-firebase-adminsdk-*.json
+
+# Python
+__pycache__/
+*.pyc
