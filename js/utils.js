@@ -59,8 +59,18 @@ const TASK_RESULT_TEMPLATE = `■ 주요 업무명
 
 const MASTER_HEADERS = ['학기', '월', '대상학년(참여시간)', '주요 교육활동(행사)', '부서(담당)'];
 
+function normalizeTask(task) {
+  if (task?.title !== undefined) return task;
+  const content = String(task?.content ?? '');
+  const m = content.match(/^■\s*(.+?)(?:\n|$)/);
+  if (m) {
+    return { id: task?.id || newId(), title: m[1].trim(), content: content.slice(m[0].length).trim() };
+  }
+  return { id: task?.id || newId(), title: '', content };
+}
+
 function defaultTask() {
-  return { id: newId(), content: TASK_RESULT_TEMPLATE };
+  return { id: newId(), title: '', content: TASK_RESULT_TEMPLATE };
 }
 
 function defaultTasks(isOther = false) {

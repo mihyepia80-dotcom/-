@@ -988,6 +988,71 @@ body {
   border-left: 3px solid var(--accent);
 }
 
+.work-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.35rem;
+}
+
+.dept-subtitle,
+.dept-result-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 0.75rem 0 0.5rem;
+}
+
+.dept-guide {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 0.5rem 0.75rem;
+}
+
+.dept-event-review {
+  margin: 0 0.75rem 1rem;
+  padding: 0.65rem;
+  background: #f4f8fb;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.dept-event-table {
+  font-size: 0.78rem;
+}
+
+.dept-event-empty {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 0.5rem 0.75rem;
+}
+
+.task-title-label,
+.task-content-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.task-title {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.88rem;
+}
+
+.task-block + .task-block {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border);
+}
+
 .person-actions {
   display: flex;
   flex-wrap: wrap;

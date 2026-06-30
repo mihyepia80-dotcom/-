@@ -1,5 +1,15 @@
 const Form6 = (() => {
   const STORAGE_KEY = 'midterm-form6';
+  const DEPT_EVENT_PATTERNS = {
+    gyomu: /교무|전재우|서유나|장임실|김이경|입학|학적|임원|삼릉통신/i,
+    saenghwal: /생활|인성|상담|유채빈|김향미|박희현|박신옥|멘토링|알뜰/i,
+    jiro: /진로|장명진|이향아|안전|소방|교통/i,
+    neulbom: /늘봄|돌봄|방과후|맞춤형/i,
+    yeongu: /연구|도서|기초학력|특수|영어|사서|AI|디벗|장학|교과서/i,
+    munhwa: /문예|체육|음악|악기|운동|수영|탈춤|예술/i,
+    gwahak: /과학|정보|방송|환경|컴퓨터|디벗|센스쿨/i,
+    grade6: /6학년|졸업|중입/i,
+  };
   let activeDeptId = DEPARTMENTS[0].id;
   let viewerName = '';
   let store = { rowData: {}, customRows: {} };
@@ -19,8 +29,49 @@ const Form6 = (() => {
   function getRowState(key, isOther = false) {
     if (!store.rowData[key]) {
       store.rowData[key] = { tasks: defaultTasks(isOther), updatedAt: '' };
+    } else {
+      store.rowData[key].tasks = (store.rowData[key].tasks || []).map(normalizeTask);
     }
     return store.rowData[key];
+  }
+
+  function deptEventsFor(dept) {
+    const pattern = DEPT_EVENT_PATTERNS[dept.id];
+    if (!pattern) return [];
+    return MasterSheet.getRows().filter((r) => {
+      const hay = `${r.dept} ${r.activity} ${r.goodPoints}`;
+      return pattern.test(hay);
+    });
+  }
+
+  function deptEventReviewHtml(dept) {
+    const rows = deptEventsFor(dept);
+    if (!rows.length) {
+      return '<p class="dept-event-empty no-print">연결된 학년 협의 행사가 없습니다.</p>';
+    }
+    const body = rows
+      .slice(0, 12)
+      .map(
+        (r) => `<tr>
+          <td>${esc(r.month)}</td>
+          <td>${esc(r.grade).replace(/\n/g, '<br>')}</td>
+          <td>${esc(r.activity).replace(/\n/g, '<br>')}</td>
+          <td>${esc(r.goodPoints).replace(/\n/g, '<br>')}</td>
+        </tr>`
+      )
+      .join('');
+    return `
+      <div class="dept-event-review">
+        <h4 class="dept-subtitle">학년별 협의 반영 <small>(6.25 · ${rows.length}건)</small></h4>
+        <div class="table-wrap">
+          <table class="eval-table dept-event-table">
+            <thead><tr>
+              <th>월</th><th>대상학년</th><th>행사</th><th>학년별 의견·추진결과</th>
+            </tr></thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
+      </div>`;
   }
 
   function getCustomRows(deptId) {
@@ -40,7 +91,7 @@ const Form6 = (() => {
     section.innerHTML = `
       <div class="form-header form-header-main">
         <h2>부서별 협의록</h2>
-        <p class="form-desc">담당자 이름 입력 시 본인 작성란만 표시됩니다</p>
+        <p class="form-desc">6.25 학년별 협의를 반영하여 부서별 1학기 추진결과·2학기 계획을 작성합니다</p>
       </div>
       <nav class="sub-tab-nav" id="f6-subtabs" role="tablist">${subTabs}</nav>
       <div class="dept-toolbar no-print">
@@ -61,10 +112,16 @@ const Form6 = (() => {
   }
 
   function taskBlockHtml(key, task, taskIndex, canDeleteTask) {
+    const t = normalizeTask(task);
     return `
-      <div class="task-block" data-task-id="${task.id}">
-        <textarea class="dept-result task-content" rows="8" data-key="${key}" data-task-id="${task.id}">${esc(task.content)}</textarea>
-        ${canDeleteTask ? `<button type="button" class="btn btn-danger btn-sm no-print task-del-btn" onclick="Form6.removeTask('${key}', '${task.id}')">업무 삭제</button>` : ''}
+      <div class="task-block" data-task-id="${t.id}">
+        <label class="task-title-label no-print">업무명
+          <input type="text" class="task-title" data-key="${key}" data-task-id="${t.id}" value="${esc(t.title)}" placeholder="세부 업무명" />
+        </label>
+        <label class="task-content-label">1학기 업무추진결과 및 2학기 계획
+          <textarea class="dept-result task-content" rows="8" data-key="${key}" data-task-id="${t.id}">${esc(t.content)}</textarea>
+        </label>
+        ${canDeleteTask ? `<button type="button" class="btn btn-danger btn-sm no-print task-del-btn" onclick="Form6.removeTask('${key}', '${t.id}')">업무 삭제</button>` : ''}
       </div>`;
   }
 
@@ -87,13 +144,17 @@ const Form6 = (() => {
             ${canDeletePerson ? `<button type="button" class="btn btn-danger btn-sm" onclick="Form6.deleteRow('${key}')">삭제</button>` : ''}
           </div>
         </div>
-        <div class="person-work">${esc(meta.work).replace(/\n/g, '<br>')}</div>
+        <div class="person-work">
+          <span class="work-label">업무 내용 <small>(세부추진계획)</small></span>
+          ${esc(meta.work).replace(/\n/g, '<br>')}
+        </div>
         ${meta.isCustom ? `
           <div class="custom-fields no-print">
             <label>계 <input type="text" class="custom-category" value="${esc(meta.category)}" placeholder="업무영역" /></label>
             <label>담당자 <input type="text" class="custom-person" value="${esc(meta.person)}" placeholder="담당자 이름" /></label>
             <label>업무내용 <input type="text" class="custom-work" value="${esc(meta.work)}" placeholder="업무 내용" /></label>
           </div>` : ''}
+        <h4 class="dept-result-title">1학기 업무추진결과 및 2학기 계획</h4>
         <div class="task-list">
           ${tasks.map((t, i) => taskBlockHtml(key, t, i, canDeleteTask)).join('')}
         </div>
@@ -120,7 +181,13 @@ const Form6 = (() => {
             <button type="button" class="btn btn-primary btn-sm" onclick="Form6.saveRow('${key}')">저장</button>
             <button type="button" class="btn btn-secondary btn-sm" onclick="Form6.resetRow('${key}')">초기화</button>
           </div>
-          <textarea class="dept-result special-result task-content" data-key="${key}" data-task-id="${state.tasks[0].id}" rows="8">${esc(state.tasks[0].content)}</textarea>
+          <h4 class="dept-result-title">1학기 업무추진결과 및 2학기 계획</h4>
+          <label class="task-title-label">업무명
+            <input type="text" class="task-title" data-key="${key}" data-task-id="${state.tasks[0].id}" value="${esc(state.tasks[0].title || '')}" placeholder="업무명 (선택)" />
+          </label>
+          <label class="task-content-label">추진결과 · 2학기 계획
+            <textarea class="dept-result special-result task-content" data-key="${key}" data-task-id="${state.tasks[0].id}" rows="8">${esc(state.tasks[0].content)}</textarea>
+          </label>
           ${state.updatedAt ? `<p class="saved-at">마지막 저장: ${esc(state.updatedAt)}</p>` : ''}
         </div>`;
       return section;
@@ -148,11 +215,13 @@ const Form6 = (() => {
       );
     });
 
-    section.innerHTML = `
-      <h3 class="dept-title">${esc(dept.name)}</h3>
-      <p class="filter-hint no-print">${viewerName ? `「${esc(viewerName)}」님의 작성란` : '담당자 이름을 입력하면 본인 작성란만 표시됩니다.'}</p>
-      <p class="filter-empty no-print" hidden>이 부서에 해당하는 담당자 작성란이 없습니다.</p>
-      <div class="person-cards">${cards.join('')}</div>`;
+      section.innerHTML = `
+        <h3 class="dept-title">${esc(dept.name)}</h3>
+        ${deptEventReviewHtml(dept)}
+        <p class="dept-guide no-print">아래 표는 <strong>계 · 담당자 · 업무내용</strong>별로 1학기 추진결과와 2학기 계획을 작성합니다.</p>
+        <p class="filter-hint no-print">${viewerName ? `「${esc(viewerName)}」님의 작성란` : '담당자 이름을 입력하면 본인 작성란만 표시됩니다.'}</p>
+        <p class="filter-empty no-print" hidden>이 부서에 해당하는 담당자 작성란이 없습니다.</p>
+        <div class="person-cards">${cards.join('')}</div>`;
     return section;
   }
 
@@ -200,9 +269,26 @@ const Form6 = (() => {
     if (!card) return null;
 
     const tasks = [];
-    card.querySelectorAll('.task-content').forEach((ta) => {
-      tasks.push({ id: ta.dataset.taskId || newId(), content: ta.value });
-    });
+    const blocks = card.querySelectorAll('.task-block');
+    if (blocks.length) {
+      blocks.forEach((block) => {
+        const id = block.dataset.taskId || block.querySelector('.task-content')?.dataset.taskId || newId();
+        tasks.push({
+          id,
+          title: block.querySelector('.task-title')?.value || '',
+          content: block.querySelector('.task-content')?.value || '',
+        });
+      });
+    } else {
+      const contentEl = card.querySelector('.task-content');
+      if (contentEl) {
+        tasks.push({
+          id: contentEl.dataset.taskId || newId(),
+          title: card.querySelector('.task-title')?.value || '',
+          content: contentEl.value || '',
+        });
+      }
+    }
 
     const isCustom = card.dataset.isCustom === '1';
     const state = { tasks, updatedAt: store.rowData[key]?.updatedAt || '' };
@@ -250,7 +336,7 @@ const Form6 = (() => {
   }
 
   function bindTaskListeners() {
-    document.querySelectorAll('.task-content').forEach((el) => {
+    document.querySelectorAll('.task-content, .task-title').forEach((el) => {
       el.addEventListener('input', debounce(() => {
         syncFromDOM();
         persistStore();
@@ -290,6 +376,9 @@ const Form6 = (() => {
       rowData: data.store.rowData || {},
       customRows: data.store.customRows || {},
     };
+    Object.values(store.rowData).forEach((state) => {
+      if (state.tasks) state.tasks = state.tasks.map(normalizeTask);
+    });
     if (data.viewerName) {
       viewerName = data.viewerName;
       const nameInput = document.getElementById('f6-viewer-name');
@@ -390,14 +479,14 @@ const Form6 = (() => {
       const key = baseRowKey(dept.id, i);
       const state = store.rowData[key] || { tasks: [] };
       state.tasks.forEach((task, ti) => {
-        rows.push([row.category.replace(/\n/g, ' '), row.person, row.work, `업무${ti + 1}`, task.content]);
+        rows.push([row.category.replace(/\n/g, ' '), row.person, row.work, task.title || `업무${ti + 1}`, task.content]);
       });
     });
 
     getCustomRows(dept.id).forEach((custom) => {
       const state = store.rowData[custom.id] || { tasks: [] };
       state.tasks.forEach((task, ti) => {
-        rows.push([custom.category, custom.person, custom.work, `업무${ti + 1}`, task.content]);
+        rows.push([custom.category, custom.person, custom.work, task.title || `업무${ti + 1}`, task.content]);
       });
     });
 
@@ -412,14 +501,19 @@ const Form6 = (() => {
     ExcelIO.download(
       `${deptTabLabel(dept)}_협의록.xlsx`,
       deptTabLabel(dept),
-      ['계', '담당자', '업무내용', '업무구분', '추진결과 및 계획'],
+      ['계', '담당자', '업무내용', '세부업무', '추진결과 및 2학기 계획'],
       rows
     );
     showToast('Excel 파일을 다운로드했습니다.');
   }
 
   function migrateLegacy(data) {
-    if (data.rowData) return data;
+    if (data.rowData) {
+      Object.values(data.rowData).forEach((state) => {
+        if (state.tasks) state.tasks = state.tasks.map(normalizeTask);
+      });
+      return data;
+    }
     const rowData = {};
     Object.entries(data.results || {}).forEach(([key, content]) => {
       rowData[key] = {
@@ -486,6 +580,11 @@ const Form6 = (() => {
         switchDept(deptId);
         applyPersonFilter();
       }
+    });
+    document.addEventListener('master-updated', () => {
+      syncFromDOM();
+      renderDepts();
+      switchDept(activeDeptId);
     });
   }
 

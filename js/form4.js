@@ -42,7 +42,7 @@ const Form4 = (() => {
     section.innerHTML = `
       <div class="form-header form-header-main">
         <h2>교과/비교과 교육활동 평가</h2>
-        <p class="form-desc">과목·프로그램별 탭을 추가하여 작성하세요</p>
+        <p class="form-desc">교과·비교과 프로그램별 평가 · (교과 및 비교과) 협의 의견 반영</p>
       </div>
       <div class="split-layout form4-split">
         <div class="split-side">
@@ -368,13 +368,13 @@ const Form4 = (() => {
   function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      tabs = [defaultTab('교과 1'), defaultTab('비교과 1')];
+      tabs = [defaultTab('교과'), defaultTab('비교과')];
       activeTabId = tabs[0].id;
       return;
     }
     const data = migrateLegacy(raw);
     if (!data || !data.tabs?.length) {
-      tabs = [defaultTab('교과 1')];
+      tabs = [defaultTab('교과'), defaultTab('비교과')];
       activeTabId = tabs[0].id;
       return;
     }
