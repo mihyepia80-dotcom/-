@@ -77,6 +77,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (typeof TemplateStore !== 'undefined') {
     await TemplateStore.fetchFromCloud().catch(() => {});
   }
+  if (typeof SeedImport !== 'undefined') {
+    SeedImport.applyAll();
+  }
   FormGrade.init();
   Form4.init();
   Form5.init();

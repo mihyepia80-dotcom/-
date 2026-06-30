@@ -182,7 +182,6 @@ const Form5 = (() => {
     const rows = readBody(bodyId(semester), semester);
     mergeSemesterRows(semester, rows);
     const meta = {
-      personName: document.getElementById('f5-person-filter')?.value?.trim() || document.getElementById('f5-writer')?.value?.trim() || '',
       writer: document.getElementById('f5-writer')?.value?.trim() || '',
       date: document.getElementById('f5-date')?.value || '',
     };

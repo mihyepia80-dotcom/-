@@ -152,19 +152,45 @@ const CloudSync = (() => {
     });
   }
 
+  function form5PersonName(meta = {}) {
+    return (
+      meta.writer?.trim() ||
+      document.getElementById('f5-writer')?.value?.trim() ||
+      meta.personName?.trim() ||
+      '관리자'
+    );
+  }
+
   async function syncForm5(semester, rows, meta = {}) {
-    const personName = meta.personName || document.getElementById('f5-person-filter')?.value?.trim() || document.getElementById('f5-writer')?.value?.trim() || '';
+    const personName = form5PersonName(meta);
+    const full = MasterSheet.getData();
+    const payload = {
+      semester,
+      rows: full.rows,
+      writer: full.writer || personName,
+      date: full.date || meta.date,
+    };
+
+    if (window.__ENV__?.ADMIN_SYNC_KEY?.trim()) {
+      try {
+        await CloudStore.saveMasterViaApi(full);
+        return true;
+      } catch (e) {
+        console.warn('행사마스터 API 저장 실패, submissions로 재시도:', e.message);
+      }
+    }
+
     return syncSave({
       formType: 'form5',
       formKey: semester,
       personName,
-      label: `행사마스터 · ${semester} · ${personName || '관리자'}`,
-      data: { semester, rows, writer: meta.writer, date: meta.date },
+      label: `행사마스터 · ${semester} · ${personName}`,
+      data: payload,
     });
   }
 
   function loadForm5(semester) {
-    const personName = document.getElementById('f5-person-filter')?.value?.trim() || document.getElementById('f5-writer')?.value?.trim() || '';
+    const personName = form5PersonName();
     loadSave({
       formType: 'form5',
       formKey: semester,
@@ -180,13 +206,25 @@ const CloudSync = (() => {
       showToast('클라우드가 설정되지 않았습니다.');
       return;
     }
-    const personName = document.getElementById('f5-person-filter')?.value?.trim() || document.getElementById('f5-writer')?.value?.trim() || '';
-    const person = requireName(personName, '담당자 이름');
-    if (!person) return;
+    const personName = form5PersonName();
     try {
+      if (window.__ENV__?.ADMIN_SYNC_KEY?.trim()) {
+        try {
+          const res = await CloudStore.loadMasterViaApi();
+          const master = res.master || res;
+          if (master?.rows?.length) {
+            MasterSheet.save(master);
+            Form5.load?.();
+            showToast('저장본을 불러왔습니다.');
+            return;
+          }
+        } catch {
+          /* submissions에서 재시도 */
+        }
+      }
       let found = 0;
       for (const semester of ['1학기', '2학기']) {
-        const item = await CloudStore.fetchSubmission('form5', semester, person);
+        const item = await CloudStore.fetchSubmission('form5', semester, personName);
         if (item?.data) {
           Form5.applyCloudRows?.(semester, item.data);
           found += 1;

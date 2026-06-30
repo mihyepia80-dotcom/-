@@ -6,6 +6,7 @@
   },
   "scripts": {
     "build": "node scripts/generate-env.js",
+    "seed": "python scripts/build-seed-data.py",
     "dev": "node scripts/generate-env.js && node scripts/dev-server.js",
     "start": "node scripts/generate-env.js && node scripts/dev-server.js",
     "check-env": "node scripts/check-env.js",

@@ -55,6 +55,7 @@ module.exports = async (req, res) => {
         personName: String(personName).trim(),
         label: label || `${formType} · ${personName}`,
         data,
+        submittedBy: 'api',
         updatedAt: new Date().toISOString(),
       };
       await col.doc(id).set(payload, { merge: true });

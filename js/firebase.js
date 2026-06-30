@@ -150,21 +150,36 @@ const CloudStore = (() => {
     };
   }
 
+  async function postSubmission({ formType, formKey, personName, label, data }) {
+    const res = await fetch('/api/submissions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ formType, formKey, personName, label, data }),
+    });
+    if (!res.ok) await parseError(res);
+    const result = await res.json();
+    return result.id;
+  }
+
   async function submit({ formType, formKey, personName, label, data }) {
     await init();
     assertReady();
     const docId = `${formType}__${formKey}__${slug(personName)}`;
     const payload = submissionPayload({ formType, formKey, personName, label, data });
+    const body = { formType, formKey, personName, label, data };
 
     if (mode === 'api') {
-      const res = await fetch('/api/submissions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ formType, formKey, personName, label, data }),
-      });
-      if (!res.ok) await parseError(res);
-      const result = await res.json();
-      return result.id;
+      return postSubmission(body);
+    }
+
+    try {
+      const health = await fetch('/api/health');
+      if (health.ok) {
+        const h = await health.json();
+        if (h.env?.firebase) return postSubmission(body);
+      }
+    } catch {
+      /* 클라이언트 직접 저장 */
     }
 
     await db.collection(collection('submissions')).doc(docId).set(payload, { merge: true });
